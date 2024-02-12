@@ -8,6 +8,12 @@ enum HTTPMethod { GET, POST }
 
 enum Sites { moodle, iconnect }
 
+const dartHeaders = {
+  'Accept-Encoding': 'gzip',
+  'Content-Type': 'application/json',
+  'User-Agent': 'Dart/3.2 (dart:io)',
+};
+
 (String, String) getCredentials() {
   var env = DotEnv(includePlatformEnvironment: true);
   env.load();
@@ -25,18 +31,27 @@ enum Sites { moodle, iconnect }
   }
 }
 
-Future<(String, List<Cookie>)> apiRequest(HttpClient httpClient,
-    HTTPMethod method, Uri url, Map<String, String> jsonBody) async {
+Future<(String, List<Cookie>)> apiRequest(
+    HttpClient httpClient, HTTPMethod method, Uri url,
+    {Map<String, String>? jsonBody, Map<String, String>? headers}) async {
+  // 1. Headers will work with both GET and POST requests.
+  // 2. Headers will fall back to dart headers if not found.
+  // 3. Body is required for POST but not for get. (If we give a GET request a body it'll just ignore it because that doesn't make sense)
   HttpClientRequest request;
-  // set headers first
+
   if (method == HTTPMethod.GET) {
     request = await httpClient.getUrl(url);
   } else {
     request = await httpClient.postUrl(url);
   }
+  // set headers first
+  if (headers != null) {
+    headers.forEach((key, value) {
+      request.headers.set(key, value);
+    });
+  }
   // request with body
-  request.headers.set('content-type', 'application/json');
-  if (method != HTTPMethod.GET) {
+  if (method != HTTPMethod.GET && jsonBody != null) {
     // GET requests usually don't need to send a JSON body
     request.add(utf8.encode(json.encode(jsonBody)));
   }
@@ -48,14 +63,16 @@ Future<(String, List<Cookie>)> apiRequest(HttpClient httpClient,
   return (reply, request.cookies);
 }
 
-Future<(String, List<Cookie>)> getRequest(
-    HttpClient httpClient, Uri url) async {
-  return await apiRequest(httpClient, HTTPMethod.GET, url, {});
+Future<(String, List<Cookie>)> getRequest(HttpClient httpClient, Uri url,
+    {Map<String, String>? headers = dartHeaders}) async {
+  return await apiRequest(httpClient, HTTPMethod.GET, url, headers: headers);
 }
 
 Future<(String, List<Cookie>)> postRequest(
-    HttpClient httpClient, Uri url, Map<String, String> jsonBody) async {
-  return await apiRequest(httpClient, HTTPMethod.POST, url, jsonBody);
+    HttpClient httpClient, Uri url, Map<String, String> jsonBody,
+    {Map<String, String>? headers = dartHeaders}) async {
+  return await apiRequest(httpClient, HTTPMethod.POST, url,
+      jsonBody: jsonBody, headers: headers);
 }
 
 // We will NOT close the connection until we execute all functions

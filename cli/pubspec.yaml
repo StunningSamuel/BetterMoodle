@@ -12,10 +12,7 @@ assets:
 # Add regular dependencies here.
 dependencies:
   dotenv: ^4.2.0
-  # flutter_dotenv: ^5.1.0
   html: ^0.15.4
-  http: ^1.2.0
-  # path: ^1.8.0
 
 dev_dependencies:
   lints: ^3.0.0
