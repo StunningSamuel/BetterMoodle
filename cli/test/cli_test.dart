@@ -42,16 +42,29 @@ void main() {
       "Sec-GPC": "1"
     };
 
-    var (getReply, _) = await getRequest(client, getUrl, headers: testHeaders);
-    var (postReply, _) =
+    var getReply = await getRequest(client, getUrl, headers: testHeaders);
+    var postReply =
         await postRequest(client, postUrl, jsonBody, headers: testHeaders);
-    var headers = json.decode(getReply)["headers"];
-    print(headers);
+    var getNoHeadersReply = await getRequest(client, getUrl);
+    var postNoHeadersReply = await postRequest(client, postUrl, jsonBody);
+    // for no headers, should have the user agent be dart io
+    expect(json.decode(getNoHeadersReply)["headers"]["User-Agent"],
+        dartHeaders["User-Agent"]);
+    expect((json.decode(postNoHeadersReply) as Map)["headers"]["User-Agent"],
+        dartHeaders["User-Agent"]);
+    expect(json.decode(json.decode(postNoHeadersReply)["data"]), jsonBody);
+    // otherwise spoof with desired user agent
     expect(json.decode(getReply)["headers"]["User-Agent"],
         testHeaders["User-Agent"]);
     expect(json.decode((json.decode(postReply)["form"] as Map).keys.first),
         jsonBody);
+
+    client.close();
   });
 
-  test('intermediate functions', () async {});
+  test('intermediate functions', () async {
+    var loginPageHTML = File("/reference/sample.html").readAsStringSync();
+
+    expect(actual, matcher)
+  });
 }

@@ -63,22 +63,40 @@ Future<(String, List<Cookie>)> apiRequest(
   return (reply, request.cookies);
 }
 
-Future<(String, List<Cookie>)> getRequest(HttpClient httpClient, Uri url,
+Future<String> getRequest(HttpClient httpClient, Uri url,
     {Map<String, String>? headers = dartHeaders}) async {
-  return await apiRequest(httpClient, HTTPMethod.GET, url, headers: headers);
+  var (reply, _) =
+      await apiRequest(httpClient, HTTPMethod.GET, url, headers: headers);
+  return reply;
 }
 
-Future<(String, List<Cookie>)> postRequest(
+Future<List<Cookie>> getRequestCookies(HttpClient httpClient, Uri url,
+    {Map<String, String>? headers = dartHeaders}) async {
+  var (_, cookies) =
+      await apiRequest(httpClient, HTTPMethod.GET, url, headers: headers);
+  return cookies;
+}
+
+Future<String> postRequest(
     HttpClient httpClient, Uri url, Map<String, String> jsonBody,
     {Map<String, String>? headers = dartHeaders}) async {
-  return await apiRequest(httpClient, HTTPMethod.POST, url,
+  var (reply, _) = await apiRequest(httpClient, HTTPMethod.POST, url,
       jsonBody: jsonBody, headers: headers);
+  return reply;
+}
+
+Future<List<Cookie>> postRequestCookies(
+    HttpClient httpClient, Uri url, Map<String, String> jsonBody,
+    {Map<String, String>? headers = dartHeaders}) async {
+  var (_, cookies) = await apiRequest(httpClient, HTTPMethod.POST, url,
+      jsonBody: jsonBody, headers: headers);
+  return cookies;
 }
 
 // We will NOT close the connection until we execute all functions
 Future<String> getLoginPageExecution(HttpClient client, Uri url) async {
   String execution;
-  var (html, _) = await getRequest(client, url);
+  var html = await getRequest(client, url);
   var document = parse(html);
   var attributes = document.querySelector("[name='execution']")!.attributes;
   execution = attributes["value"]!;
@@ -98,16 +116,49 @@ Future<String> login(HttpClient client, Sites site) async {
         "https://icas.bau.edu.lb:8443/cas/login?service=$serviceParam");
     var execution = await getLoginPageExecution(client, url);
 
-    var (username, password) = getCredentials();
-    var (reply, _) = await postRequest(client, url, {
-      "username": username,
-      "password": password,
-      "execution": execution,
-      "_eventId": "submit",
-      "geolocation": ""
-    });
+    var pageHeaders = {
+      "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.7113.93 Safari/537.36",
+      "Accept":
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/jxl,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Origin": "https://icas.bau.edu.lb:8443",
+      "DNT": "1",
+      "Connection": "keep-alive",
+      "Referer": "https://icas.bau.edu.lb:8443/cas/login?service=$serviceParam",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "same-origin",
+      "Sec-Fetch-User": "?1",
+      "Sec-GPC": "1"
+    };
 
-    return reply;
+    assert(execution.isNotEmpty);
+
+    var (username, password) = getCredentials();
+    var (reply, cookies) = await apiRequest(client, HTTPMethod.POST, url,
+        jsonBody: {
+          "username": username,
+          "password": password,
+          "execution": execution,
+          "_eventId": "submit",
+          "geolocation": ""
+        },
+        headers: pageHeaders);
+
+    // shouldn't have too much overhead
+    var loginPageHTML = File("/reference/sample.html").readAsStringSync();
+    print(cookies);
+    assert(reply != loginPageHTML);
+
+    var pageGet = await getRequest(
+        client, Uri.parse(Uri.decodeFull(serviceParam)),
+        headers: pageHeaders);
+
+    return pageGet;
   } finally {
     client.close();
   }
