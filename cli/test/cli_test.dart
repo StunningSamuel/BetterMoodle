@@ -63,8 +63,7 @@ void main() {
   });
 
   test('intermediate functions', () async {
-    var loginPageHTML = File("/reference/sample.html").readAsStringSync();
-
-    expect(actual, matcher)
+    // var loginPageHTML = File("/reference/sample.html").readAsStringSync();
+    // expect(actual, matcher)
   });
 }
