@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:project_bettermoodle/utils.dart';
 
 var client = HTTPSession();
@@ -26,7 +27,7 @@ Future<void> main(List<String> args) async {
       "Sec-GPC": "1"
     };
     var reply = await client.getRequest(url, headers: loginHeaders);
-    print(reply);
+    debugPrint(reply);
   } finally {
     client.close();
   }
