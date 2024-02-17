@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project_bettermoodle/utils.dart';
+import 'package:http_session/http_session.dart';
 
-var client = HTTPSession();
+var client = HttpSession();
 
 Future<void> main(List<String> args) async {
   try {
@@ -26,8 +26,8 @@ Future<void> main(List<String> args) async {
       "Sec-Fetch-User": "?1",
       "Sec-GPC": "1"
     };
-    var reply = await client.getRequest(url, headers: loginHeaders);
-    debugPrint(reply);
+    var reply = await client.get(url, headers: loginHeaders);
+    debugPrint(reply.body);
   } finally {
     client.close();
   }

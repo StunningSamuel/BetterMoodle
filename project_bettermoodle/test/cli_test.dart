@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http_session/http_session.dart';
 import 'package:project_bettermoodle/utils.dart';
 import 'package:test/test.dart';
 
@@ -10,7 +11,7 @@ void main() {
     // 1. Headers must work with both GET and POST requests.
     // 2. Headers will fall back to dart headers if not found.
     // 3. Body is required for POST but not for get. (If we give a GET request a body it'll just ignore it because that doesn't make sense)
-    var client = HTTPSession();
+    var client = HttpSession();
     var getUrl = Uri.parse("https://httpbin.org/headers");
     var postUrl = Uri.parse("https://httpbin.org/post");
     var jsonBody = {"foo": "bar", "pussy": "juice"};
@@ -40,22 +41,21 @@ void main() {
       "Sec-GPC": "1"
     };
 
-    var getReply = await client.getRequest(getUrl, headers: testHeaders);
+    var getReply = (await client.get(getUrl, headers: testHeaders)).body;
     var postReply =
-        await client.postRequest(postUrl, jsonBody, headers: testHeaders);
-    var getNoHeadersReply = await client.getRequest(getUrl);
-    var postNoHeadersReply = await client.postRequest(postUrl, jsonBody);
+        (await client.post(postUrl, body: jsonBody, headers: testHeaders)).body;
+    var getNoHeadersReply = (await client.get(getUrl)).body;
+    var postNoHeadersReply = (await client.post(postUrl, body: jsonBody)).body;
     // for no headers, should have the user agent be dart io
     expect(json.decode(getNoHeadersReply)["headers"]["User-Agent"],
         dartHeaders["User-Agent"]);
     expect((json.decode(postNoHeadersReply) as Map)["headers"]["User-Agent"],
         dartHeaders["User-Agent"]);
-    expect(json.decode(json.decode(postNoHeadersReply)["data"]), jsonBody);
+    expect(json.decode(postNoHeadersReply)["form"], jsonBody);
     // otherwise spoof with desired user agent
     expect(json.decode(getReply)["headers"]["User-Agent"],
         testHeaders["User-Agent"]);
-    expect(json.decode((json.decode(postReply)["form"] as Map).keys.first),
-        jsonBody);
+    expect(json.decode(postReply)["form"], jsonBody);
 
     client.close();
   });
@@ -63,14 +63,10 @@ void main() {
   test('intermediate functions', () async {
     // var loginPageHTML = File("lib/reference/sample.html").readAsStringSync();
     // var reqHTML = File("lib/reference/request.html");
-    var client = HTTPSession();
-    try {
-      var req = await loginMoodle(client);
-      debugPrint(req);
-      // reqHTML.writeAsStringSync(req);
-      // assert(req != loginPageHTML);
-    } finally {
-      client.close();
-    }
+    var client = HttpSession();
+    var req = await loginMoodle(client);
+    debugPrint(req);
+    // reqHTML.writeAsStringSync(req);
+    // assert(req != loginPageHTML);
   });
 }
