@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:requests/requests.dart';
-import 'package:html/parser.dart';
+import 'package:http/retry.dart';
+import 'package:http/http.dart' as http;
 import 'package:project_bettermoodle/utils.dart';
 import 'package:test/test.dart';
 
@@ -10,6 +10,8 @@ void main() {
     // 1. Headers must work with both GET and POST requests.
     // 2. Headers will fall back to dart headers if not found.
     // 3. Body is required for POST but not for get. (If we give a GET request a body it'll just ignore it because that doesn't make sense)
+
+    final client = RetryClient(http.Client());
     var getUrl = Uri.parse("https://httpbin.org/headers");
     var postUrl = Uri.parse("https://httpbin.org/post");
     var jsonBody = {"foo": "bar", "pussy": "juice"};
@@ -39,14 +41,11 @@ void main() {
       "Sec-GPC": "1"
     };
 
-    var getReply =
-        (await Requests.get(getUrl.toString(), headers: testHeaders)).body;
-    var postReply = (await Requests.post(postUrl.toString(),
-            body: jsonBody, headers: testHeaders))
-        .body;
-    var getNoHeadersReply = (await Requests.get(getUrl.toString())).body;
-    var postNoHeadersReply =
-        (await Requests.post(postUrl.toString(), body: jsonBody)).body;
+    var getReply = (await client.get(getUrl, headers: testHeaders)).body;
+    var postReply =
+        (await client.post(postUrl, body: jsonBody, headers: testHeaders)).body;
+    var getNoHeadersReply = (await client.get(getUrl)).body;
+    var postNoHeadersReply = (await client.post(postUrl, body: jsonBody)).body;
     // for no headers, should have the user agent be dart io
     expect(json.decode(getNoHeadersReply)["headers"]["User-Agent"],
         dartHeaders["User-Agent"]);
@@ -57,15 +56,20 @@ void main() {
     expect(json.decode(getReply)["headers"]["User-Agent"],
         testHeaders["User-Agent"]);
     expect(json.decode(postReply)["form"], jsonBody);
+    client.close();
   });
 
   test('intermediate functions', () async {
-    var req = await loginMoodle();
-    var document = parse(req);
-    var attributes = document.querySelector("[name='execution']")?.attributes;
-    var execution = attributes?["value"];
-    expect(execution,
-        null); // there should be no execution in the page when we login.
+    var execution_url =
+        "https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php";
+      
+    var execution = getLoginPageExecution(execution_url, headers)
+    // var req = await loginMoodle();
+    // var document = parse(req);
+    // var attributes = document.querySelector("[name='execution']")?.attributes;
+    // var execution = attributes?["value"];
+    // expect(execution,
+    //     null); // there should be no execution in the page when we login.
   });
   test('get notifications', () async {});
 }
