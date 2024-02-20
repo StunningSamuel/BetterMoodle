@@ -1,16 +1,12 @@
-"""
-THIS MODULE IS NOT ALLOWED TO BE IMPORTED BY OTHER MODULES !!!!!!!!
-
-"""
-
 import asyncio
 from typing import Union
 import httpx
-from utilities.common import add_cookies_to_header, IO_DATA_DIR, my_format, css_selector, url_encode, soup_bowl, json, WebsiteMeta, mapping_init
+from utilities.common import IO_DATA_DIR, my_format, css_selector, url_encode, soup_bowl, json, WebsiteMeta, mapping_init
 
 LOGIN_URL = r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php"
 SECURE_URL = r"https://moodle.bau.edu.lb/my/"
 SERIVCE_URL = r"https://moodle.bau.edu.lb/lib/ajax/service.php"
+cookie_jar = dict()
 
 api_payload = [
     {
@@ -94,6 +90,7 @@ api_headers = {
 
 
 async def login():
+    global cookie_jar
     Session = httpx.AsyncClient(follow_redirects=True)
     global service_headers, api_headers
     page = await Session.get(url=LOGIN_URL)
@@ -111,49 +108,58 @@ async def login():
     cookie_jar = dict(Session.cookies.items())
     my_format(
         f"{cookie_jar['MoodleSession'], cookie_jar['BNES_MoodleSession' ]}", "Required Items")
-    service_headers, api_headers = tuple(add_cookies_to_header(
-        header, cookie_jar) for header in (service_headers, api_headers))
-    r = await Session.get(SECURE_URL, headers=service_headers)
-    assert r.url == SECURE_URL
-    moodle_html = soup_bowl(r.text)
-    assert 'notifications' in r.text
-    my_format("Cookies in service headers: ",
-                f"{json.dumps(service_headers,indent=4)}")
-    sesskey: str = moodle_html.select_one("[name=sesskey]")["value"]
-    return Session, sesskey
+    # service_headers, api_headers = tuple(add_cookies_to_header(
+    #     header, cookie_jar) for header in (service_headers, api_headers))
+    # r = await Session.get(SECURE_URL, headers=service_headers)
+    # assert r.url == SECURE_URL
+    # assert 'notifications' in r.text
+    # my_format("Cookies in service headers: ",
+    #             f"{json.dumps(service_headers,indent=4)}")
+
+    return Session, l.text
+
+def get_user_info(moodle_html : str):
+    soup : str = soup_bowl(moodle_html)
+    sesskey: str = soup.select_one("[name=sesskey]")["value"]
+    userid = soup.select_one("[data-userid]").attrs["data-userid"]
+    return sesskey,userid
+
+    
+
+async def get_notifications(moodle_html : str, Session : httpx.AsyncClient) -> Union[dict, list]:
+    sesskey,userid = get_user_info(moodle_html)
+    my_format("Payload json object: ", api_payload)
+    api_querystring = {"sesskey": sesskey,
+                        "info": "message_popup_get_popup_notifications"}
+    api_payload[0]["args"]["useridto"] = userid
+    my_format("User ID: ", userid)
+    api_response = await Session.post(url=SERIVCE_URL,
+                                        headers=service_headers,
+                                        json=api_payload,
+                                        params=api_querystring
+                                        )
+    IO_DATA_DIR("results.json", "w", text=json.dumps(
+        api_response.json(), indent=4))
+    return api_response.json()
+
+async def get_courses(moodle_html : str, Session : httpx.AsyncClient) -> Union[dict, list]:
+    sesskey, _ = get_user_info(moodle_html)
+    courses_querystring = {
+        "sesskey": sesskey, "info": "core_course_get_enrolled_courses_by_timeline_classification"}
+    courses = await Session.post(url=SERIVCE_URL,
+                                    headers=service_headers,
+                                    json=courses_payload,
+                                    params=courses_querystring)
+    required_json = courses.json()
+    if required_json:
+        IO_DATA_DIR("courses.json", "w",
+                        json.dumps(required_json, indent=4))
+    return required_json
 
 
 async def main():
-    Session, sesskey = await login()
-
-    async def get_notifications() -> Union[dict, list]:
-        my_format("Payload json object: ", api_payload)
-        api_querystring = {"sesskey": sesskey,
-                           "info": "message_popup_get_popup_notifications"}
-        api_response = await Session.post(url=SERIVCE_URL,
-                                          headers=service_headers,
-                                          json=api_payload,
-                                          params=api_querystring
-                                          )
-        IO_DATA_DIR("results.json", "w", text=json.dumps(
-            api_response.json(), indent=4))
-        return api_response.json()
-
-    async def get_courses() -> Union[dict, list]:
-        courses_querystring = {
-            "sesskey": sesskey, "info": "core_course_get_enrolled_courses_by_timeline_classification"}
-        courses = await Session.post(url=SERIVCE_URL,
-                                     headers=service_headers,
-                                     json=courses_payload,
-                                     params=courses_querystring)
-        required_json = courses.json()
-        if required_json:
-            IO_DATA_DIR("courses.json", "w",
-                         json.dumps(required_json, indent=4))
-        return required_json
-    
-
-    notifications, courses = await asyncio.gather(get_notifications(),get_courses())
+    Session, moodle_html = await login()
+    notifications, courses = await asyncio.gather(get_notifications(moodle_html,Session),get_courses(moodle_html,Session))
     for i in (notifications, courses):
         assert type(i) != dict
 
