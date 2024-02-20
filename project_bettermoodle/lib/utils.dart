@@ -1,15 +1,11 @@
 import 'dart:convert';
-import 'dart:io'
-    show
-        Cookie,
-        File,
-        HttpClient,
-        HttpClientRequest,
-        HttpClientResponse,
-        HttpHeaders;
+import 'dart:io' show Cookie, File, HttpHeaders;
 import 'dart:math' show Random;
 import 'package:dotenv/dotenv.dart';
 import 'package:html/parser.dart';
+import 'package:http/http.dart';
+import 'package:http/retry.dart';
+import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 // import 'package:requests/requests.dart';
 
 // ignore: constant_identifier_names
@@ -41,68 +37,86 @@ const dartHeaders = {
   }
 }
 
+String generateCookieHeader(List<Cookie> cookieJar) {
+  var cookies =
+      List<Cookie>.of(cookieJar.where((element) => element.value.isNotEmpty));
+
+  return cookies.map((e) => "${e.name}=${e.value}").join(";");
+}
+
+Map<String, String> generateRandomUserAgent(Map<String, String> headers) {
+  List<dynamic> useragents = jsonDecode(
+      File("lib/reference/browsers.json").readAsStringSync())["useragents"];
+
+  String randomUseragent =
+      useragents[Random().nextInt(useragents.length)]["useragent"];
+
+  headers[HttpHeaders.userAgentHeader] = randomUseragent;
+
+  return headers;
+}
+
 class HTTPSession {
   // only one client per session
-  static HttpClient client = HttpClient();
+  Client client = RetryClient(
+    Client(),
+    when: (p0) {
+      try {
+        return p0.statusCode == 503;
+        // retry if the net is being shit
+      } on ClientException {
+        return true;
+      }
+    },
+  );
   List<Cookie> cookies = [];
 
-  Future<HttpClientResponse> apiRequest(HTTPMethod method, String url,
-      {Map<String, String>? jsonBody, Map<String, String>? headers}) async {
+  Future<Response> apiRequest(HTTPMethod method, String url,
+      {Map<String, String>? jsonBody,
+      Map<String, String> headers = dartHeaders}) async {
     // 1. Headers will work with both GET and POST requests.
     // 2. Headers will fall back to dart headers if not found.
     // 3. Body is required for POST but not for get. (If we give a GET request a body it'll just ignore it because that doesn't make sense)
-    HttpClientRequest request;
+    Response response;
 
     if (method == HTTPMethod.GET) {
-      request = await client.getUrl(Uri.parse(url));
+      response = await client.get(Uri.parse(url), headers: headers);
     } else {
-      request = await client.postUrl(Uri.parse(url));
+      response = await client.post(Uri.parse(url), body: jsonBody ?? {});
     }
-    request.followRedirects = true;
-    request.maxRedirects = 20;
-    request.persistentConnection = true;
     // set headers first
-    if (headers != null) {
-      headers.forEach((key, value) {
-        request.headers.set(key, value);
-      });
-    }
+    headers.forEach((key, value) {
+      response.headers[key] = value;
+    });
     var cookieHeaderValue = generateCookieHeader(cookies);
     if (cookieHeaderValue.isNotEmpty) {
-      request.headers.set(HttpHeaders.cookieHeader, cookieHeaderValue);
+      response.headers[HttpHeaders.cookieHeader] = cookieHeaderValue;
     }
-    // request with body
-    if (method != HTTPMethod.GET && jsonBody != null) {
-      // GET requests usually don't need to send a JSON body
-      request.add(utf8.encode(json.encode(jsonBody)));
-    }
-    HttpClientResponse response = await request.close();
-    if (response.statusCode != 200) {
+    if ((400 <= response.statusCode) && (response.statusCode < 600)) {
       throw Exception("Failed to get response!");
     }
 
-    var requestCookies = response.cookies;
+    var requestCookies = SweetCookieJar.from(response: response);
     // make sure to store cookies after each request
+    var requestCookiesList = requestCookies.nameSet
+        .map((name) => requestCookies.find(name: name))
+        .toList();
     if (requestCookies.isNotEmpty) {
-      cookies += requestCookies;
+      cookies += requestCookiesList;
     }
     return response;
   }
 
-  static Future<String> returnResponse(HttpClientResponse response) async {
-    return await response.transform(utf8.decoder).join();
-  }
-
-  Future<HttpClientResponse> get(String url,
+  Future<Response> get(String url,
       {Map<String, String> headers = dartHeaders}) async {
     var reply = await apiRequest(HTTPMethod.GET, url, headers: headers);
     return reply;
   }
 
-  Future<HttpClientResponse> post(String url,
+  Future<Response> post(String url,
       {Map<String, String>? body,
       Map<String, String> headers = dartHeaders}) async {
-    HttpClientResponse reply;
+    Response reply;
     if (body != null) {
       reply = await apiRequest(HTTPMethod.POST, url,
           jsonBody: body, headers: headers);
@@ -110,13 +124,6 @@ class HTTPSession {
       reply = await apiRequest(HTTPMethod.POST, url, headers: headers);
     }
     return reply;
-  }
-
-  static String generateCookieHeader(List<Cookie> cookieJar) {
-    var cookies =
-        List<Cookie>.of(cookieJar.where((element) => element.value.isNotEmpty));
-
-    return cookies.map((e) => "${e.name}=${e.value}").join(";");
   }
 
   void close() {
@@ -129,15 +136,14 @@ final HTTPSession client = HTTPSession();
 Future<String> getLoginPageExecution(
     String url, Map<String, String> headers) async {
   String execution;
-  var html =
-      await HTTPSession.returnResponse(await client.get(url, headers: headers));
+  var html = (await client.get(url, headers: headers)).body;
   var document = parse(html);
   var attributes = document.querySelector("[name='execution']")!.attributes;
   execution = attributes["value"]!;
   return execution;
 }
 
-Future<String> login(String site) async {
+Future<Response> login(String site) async {
   var url = "https://icas.bau.edu.lb:8443/cas/login?service=$site";
   List<dynamic> useragents = jsonDecode(
       File("lib/reference/browsers.json").readAsStringSync())["useragents"];
@@ -189,21 +195,20 @@ Future<String> login(String site) async {
           "Encountered error status code ${loginResponse.statusCode}!");
     }
     var cookies = client.cookies;
-    currentUrl = loginResponse.headers.value("location")!;
-    pageHeaders[HttpHeaders.cookieHeader] =
-        HTTPSession.generateCookieHeader(cookies);
-    pageHeaders.update(
-      "Host",
-      (value) => Uri.parse(currentUrl).host,
-      ifAbsent: () => Uri.parse(currentUrl).host,
-    );
+    currentUrl = loginResponse.headers["location"]!;
+    // pageHeaders[HttpHeaders.cookieHeader] = generateCookieHeader(cookies);
+    // pageHeaders.update(
+    //   "Host",
+    //   (value) => Uri.parse(currentUrl).host,
+    //   ifAbsent: () => Uri.parse(currentUrl).host,
+    // );
     loginResponse = await client.get(currentUrl, headers: pageHeaders);
   }
 
-  return await HTTPSession.returnResponse(loginResponse);
+  return loginResponse;
 }
 
-Future<String> loginMoodle() async {
+Future<Response> loginMoodle() async {
   // var moodleHeaders = {
   //   'User-Agent':
   //       "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.7113.93 Safari/537.36",

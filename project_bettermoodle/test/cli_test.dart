@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:html/parser.dart';
 import 'package:http/retry.dart';
 import 'package:http/http.dart' as http;
 import 'package:project_bettermoodle/utils.dart';
@@ -59,17 +60,44 @@ void main() {
     client.close();
   });
 
-  test('intermediate functions', () async {
-    var execution_url =
+  test('get execution', () async {
+    var executionUrl =
         "https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php";
-      
-    var execution = getLoginPageExecution(execution_url, headers)
-    // var req = await loginMoodle();
-    // var document = parse(req);
-    // var attributes = document.querySelector("[name='execution']")?.attributes;
-    // var execution = attributes?["value"];
-    // expect(execution,
-    //     null); // there should be no execution in the page when we login.
+
+    var headers = {
+      'Accept':
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      'Accept-Language': "en-US,en;q=0.5",
+      'Accept-Encoding': "gzip, deflate, br",
+      'Content-Type': "application/x-www-form-urlencoded",
+      'DNT': "1",
+      'Connection': "keep-alive",
+      'Upgrade-Insecure-Requests': "1",
+      'Sec-Fetch-Dest': "document",
+      'Sec-Fetch-Mode': "navigate",
+      'Sec-Fetch-Site': "same-origin",
+      'Sec-Fetch-User': "?1",
+      'Sec-GPC': "1",
+      'sec-ch-ua-platform': "Windows",
+      'sec-ch-ua':
+          "\"Google Chrome\";v=\"113\", \"Chromium\";v=\"113\", \"Not=A?Brand\";v=\"24\"",
+      'sec-ch-ua-mobile': "?0",
+      'Pragma': "no-cache",
+      'Cache-Control': "no-cache"
+    };
+
+    var execution = await getLoginPageExecution(
+        executionUrl, generateRandomUserAgent(headers));
+
+    assert(execution.isNotEmpty);
+  });
+  test('login', () async {
+    var req = await loginMoodle();
+    var document = parse(req);
+    var attributes = document.querySelector("[name='execution']")?.attributes;
+    var execution = attributes?["value"];
+    expect(execution,
+        null); // there should be no execution in the page when we login.
   });
   test('get notifications', () async {});
 }
