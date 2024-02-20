@@ -1,4 +1,10 @@
+import os
 from flask import Flask
+from endpoint import main
+import asyncio
+from typing import Union
+import httpx
+from utilities.common import add_cookies_to_header, IO_DATA_DIR, my_format, css_selector, url_encode, soup_bowl, json, WebsiteMeta, mapping_init
 app = Flask(__name__)
 
 @app.route("/")
@@ -7,11 +13,13 @@ def home():
 
 @app.route("/notifications")
 def test():
-    return "Welcome to the notifications center!"
+    print("Welcome to the notifications center!")
+    main()
 
 @app.route("/schedule")
 def wel():
-    return "Welcome to the schedule center!"
+    print("Welcome to the schedule center!")
+    main()
 
 if __name__ == "__main__":
     app.run("0.0.0.0")
