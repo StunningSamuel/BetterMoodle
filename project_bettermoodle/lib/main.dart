@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart';
+import 'package:project_bettermoodle/utils.dart';
 
 void main() {
   runApp(const MyApp());
@@ -68,6 +70,15 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Future<void> login() async {
+    var req = await loginMoodle();
+    var document = parse(req);
+    var attributes = document.querySelector("[name='execution']")?.attributes;
+    var execution = attributes?["value"];
+    assert(execution ==
+        null); // there should be no execution in the page when we login.
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -116,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: login,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
