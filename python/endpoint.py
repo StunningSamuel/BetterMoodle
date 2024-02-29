@@ -15,7 +15,7 @@ api_payload = [
         "args": {
             "limit": 20,
             "offset": 0,
-            "useridto": "20663"
+            "useridto": ""
         }
     }
 ]

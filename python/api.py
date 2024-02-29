@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from endpoint import main
+from endpoint import get_notifications, login, main
 import asyncio
 from typing import Union
 import httpx
@@ -14,7 +14,8 @@ def home():
 @app.route("/notifications")
 def test():
     print("Welcome to the notifications center!")
-    main()
+    Session,html = asyncio.run(login())
+    asyncio.run(get_notifications(html,Session))
 
 @app.route("/schedule")
 def wel():

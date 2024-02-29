@@ -48,3 +48,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+*.txt
+*env
+*stuff/creds.txt
+python/bot_data_stuff/
