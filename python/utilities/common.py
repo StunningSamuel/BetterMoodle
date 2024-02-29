@@ -472,8 +472,8 @@ def mapping_init():
     IO_DATA_DIR("mappings.json", "w", "")
     data = courses_wrapper()
     data = (i for i in data)
-    mappings = {item["shortname"]: html.unescape(
-        item["fullname"]).split("-")[0] for item in data}
+    mappings = {item["shortname"].split("-")[0]: " ".join(word for word in re.sub(r'[^a-zA-Z\s]'," ",  html.unescape(
+        item["fullname"])).strip().split() if not word.isspace())  for item in data}
     IO_DATA_DIR("mappings.json", "w", json.dumps(mappings, indent=4))
 
 def insert_into_dict(dictionary, index, pair) -> dict:

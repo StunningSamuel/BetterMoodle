@@ -1,7 +1,9 @@
 import asyncio
+import re
 from typing import Union
+from bs4 import BeautifulSoup
 import httpx
-from utilities.common import IO_DATA_DIR, my_format, css_selector, url_encode, soup_bowl, json, WebsiteMeta, mapping_init
+from utilities.common import IO_DATA_DIR, my_format, css_selector, url_encode, soup_bowl, json, WebsiteMeta
 
 LOGIN_URL = r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php"
 SECURE_URL = r"https://moodle.bau.edu.lb/my/"
@@ -61,7 +63,7 @@ login_headers = {
     "Origin": "https://icas.bau.edu.lb:8443",
     "DNT": "1",
     "Connection": "keep-alive",
-    "Referer": r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php",
+    # "Referer": r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php",
     "Upgrade-Insecure-Requests": "1",
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
@@ -88,45 +90,70 @@ api_headers = {
 
 }
 
+def raise_if_none(soup : BeautifulSoup,selector: str, attribute : str | None = None):
+    result = soup.select_one(selector)
+    if not result :
+        raise Exception("Failed to get value from css selector!")
+    if attribute:
+        return getattr(result,attribute)
+    
+    return result
 
-async def login():
-    global cookie_jar
+async def login(referer : str):
+    unencoded_url = fr"https://icas.bau.edu.lb:8443/cas/login?service={referer}"
+    login_headers["Referer"] = unencoded_url
+    my_format(unencoded_url, "Login URL is")
     Session = httpx.AsyncClient(follow_redirects=True)
-    global service_headers, api_headers
-    page = await Session.get(url=LOGIN_URL)
+    page = await Session.get(url=unencoded_url)
     my_format("HTML exists  ", f"{bool(page.text)}")
     execution = css_selector(page.text, "[name=execution]", "value")
     my_format("execution string: ", execution)
-    l = await Session.post(LOGIN_URL,
+    l = await Session.post(unencoded_url,
                             data=url_encode(
                                 {"username": WebsiteMeta.username,
                                 "password": WebsiteMeta.password,
                                 "execution": fr"{execution}", "_eventId": "submit",
                                 "geolocation": ""}),
-                            headers=login_headers, params=courses_querystring)
+                            headers=login_headers)
+    my_format(l.url, "We are on")
     Session.cookies.extract_cookies(l)
-    cookie_jar = dict(Session.cookies.items())
-    my_format(
-        f"{cookie_jar['MoodleSession'], cookie_jar['BNES_MoodleSession' ]}", "Required Items")
-    # service_headers, api_headers = tuple(add_cookies_to_header(
-    #     header, cookie_jar) for header in (service_headers, api_headers))
-    # r = await Session.get(SECURE_URL, headers=service_headers)
-    # assert r.url == SECURE_URL
-    # assert 'notifications' in r.text
-    # my_format("Cookies in service headers: ",
-    #             f"{json.dumps(service_headers,indent=4)}")
-
     return Session, l.text
 
 def get_user_info(moodle_html : str):
-    soup : str = soup_bowl(moodle_html)
-    sesskey: str = soup.select_one("[name=sesskey]")["value"]
-    userid = soup.select_one("[data-userid]").attrs["data-userid"]
+
+    soup = soup_bowl(moodle_html)
+    sesskey = raise_if_none(soup,"[name=sesskey]","attrs")["value"]
+    userid = raise_if_none(soup,"[data-userid]","attrs")["data-userid"]
+
     return sesskey,userid
 
     
+async def get_schedule():
+    _, response = await login("http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd")
+    # we want to parse the html from it
+    # uncomment this for testing
+    # response = open("./scratch.html").read()
+    mappings = json.loads(IO_DATA_DIR("mappings.json"))
+    json_response = []
+    soop = soup_bowl(response)
+    course_items = list(i.text for i in soop.select(".ddlabel > a"))
+    for course in course_items:
+        subject_key = re.sub(r"\s","",course.split("-")[0])
+        subject = mappings[subject_key]
+        time = re.search(r"\d+:\d+\s[ampm]+-\d+:\d+\s[ampm]+",course)
+        location = re.search(r"[^ampm]+ E\w+\d+",course)  
+        if not time or not location:
+            raise Exception("Couldn't find time or location for course!")
+        
+        json_response.append({
+        "subject" : subject,
+        "time" : time.group(),
+        "location" : location.group(),
+        })
 
-async def get_notifications(moodle_html : str, Session : httpx.AsyncClient) -> Union[dict, list]:
+    return {"Courses" : json_response}
+
+async def get_notifications(moodle_html : str, Session : httpx.AsyncClient):
     sesskey,userid = get_user_info(moodle_html)
     my_format("Payload json object: ", api_payload)
     api_querystring = {"sesskey": sesskey,
@@ -158,11 +185,11 @@ async def get_courses(moodle_html : str, Session : httpx.AsyncClient) -> Union[d
 
 
 async def main():
-    Session, moodle_html = await login()
+    Session, moodle_html = await login("https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php")
     notifications, courses = await asyncio.gather(get_notifications(moodle_html,Session),get_courses(moodle_html,Session))
     for i in (notifications, courses):
         assert type(i) != dict
 
-asyncio.run(main())
+# asyncio.run(main())
 # set up the data needed on data fetch
-mapping_init()
+# mapping_init()
