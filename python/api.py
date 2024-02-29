@@ -15,7 +15,7 @@ def home():
 def test():
     print("Welcome to the notifications center!")
     Session,html = asyncio.run(login())
-    asyncio.run(get_notifications(html,Session))
+    return asyncio.run(get_notifications(html,Session))
 
 @app.route("/schedule")
 def wel():
@@ -23,4 +23,4 @@ def wel():
     main()
 
 if __name__ == "__main__":
-    app.run("0.0.0.0")
+    app.run("0.0.0.0", debug=True)
