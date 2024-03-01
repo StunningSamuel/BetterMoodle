@@ -1,3 +1,4 @@
+import html
 import json
 import logging
 import re
@@ -52,18 +53,6 @@ def get_user_info(moodle_html : str):
     return sesskey,userid
 
 
-def open_data_dir(filename : str, open_mode : str = "r", text : str = ""):
-    """
-    Writes (and truncates) or reads a file from the data directory.
-
-    # Keep in mind that anything already written will be overwritten because the file is truncated first!
-    """
-    file = open(f"./bot_data_stuff/{filename}",open_mode)
-    if text != "":
-        file.write(text)
-        return
-    
-    return file.read()
 
 
 # set up the data needed on data fetch
@@ -179,35 +168,37 @@ async def login_moodle(username : str, password : str):
 
     
 async def get_schedule(username:str,password:str):
+    #TODO : also make a more efficient login mechanism because this takes way too long
+    course_session, course_html = await login_moodle(username,password) 
+    courses = await get_courses(course_html,course_session)
+    mappings = {item["shortname"].split("-")[0]: " ".join(word for word in re.sub(r'[^a-zA-Z\s]'," ",  html.unescape(
+        item["fullname"])).strip().split() if not word.isspace())  for item in courses[0]["data"]["courses"]}
+    await course_session.aclose() # we don't need this session anymore, make a new one
     _, response = await login("http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",username,password)
     # we want to parse the html from it
     # uncomment this for testing
     # response = open("./scratch.html").read()
-    result = open_data_dir("mappings.json")
-    if not result:
-        raise Exception("Couldn't read mappings file!")
-    mappings = json.loads(result)
     json_response = []
     soop = soup_bowl(response)
     course_items = list(i.text for i in soop.select(".ddlabel > a"))
-    # for course in course_items:
-    #     subject_key,crn =course.split("-") 
-    #     crn = re.sub(r"\s","",crn)
-    #     subject_key = re.sub(r"\s","",subject_key)
-    #     subject = mappings[subject_key]
-    #     time = re.search(r"\d+:\d+\s[ampm]+-\d+:\d+\s[ampm]+",course)
-    #     location = re.search(r"[^ampm]+ E\w+\d+",course)  
-    #     if not time or not location:
-    #         raise Exception("Couldn't find time or location for course!")
+    for course in course_items:
+        subject_key = course.split("-")[0]
+        crn = course.split("-")[1][:course.split("-")[1].find(" ")]
+        crn = re.sub(r"\s","",crn)
+        subject_key = re.sub(r"\s","",subject_key)
+        subject = mappings[subject_key]
+        time = re.search(r"\d+:\d+\s[ampm]+-\d+:\d+\s[ampm]+",course)
+        location = re.search(r"[^ampm]+ E\w+\d+",course)  
+        if not time or not location:
+            raise Exception("Couldn't find time or location for course!")
         
-    #     json_response.append({
-    #     "subject" : subject,
-    #     "time" : time.group(),
-    #     "location" : location.group(),
-    #     })
-    # return {"Courses" : json_response}
-
-    return course_items,_
+        json_response.append({
+        "subject" : subject,
+        "time" : time.group(),
+        "location" : location.group(),
+        })
+    return {"Courses" : json_response}, _
+    # return course_items,_
 
 
 async def get_notifications(moodle_html : str, Session : httpx.AsyncClient):
@@ -222,8 +213,6 @@ async def get_notifications(moodle_html : str, Session : httpx.AsyncClient):
                                         json=api_payload,
                                         params=api_querystring
                                         )
-    open_data_dir("results.json", "w", text=json.dumps(
-        api_response.json(), indent=4))
     return api_response.json()
 
 async def get_courses(moodle_html : str, Session : httpx.AsyncClient) -> Union[dict, list]:
@@ -235,8 +224,5 @@ async def get_courses(moodle_html : str, Session : httpx.AsyncClient) -> Union[d
                                     json=courses_payload,
                                     params=courses_querystring)
     required_json = courses.json()
-    if required_json:
-        open_data_dir("courses.json", "w",
-                        json.dumps(required_json, indent=4))
     return required_json
 

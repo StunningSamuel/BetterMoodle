@@ -42,9 +42,9 @@ def home():
 @app.route("/notifications")
 @requires_basic_auth
 def test():
+    username,password = get_creds()
+    Session,html = asyncio.run(login_moodle(username,password))
     try:
-        username,password = get_creds()
-        Session,html = asyncio.run(login_moodle(username,password))
         print("Welcome to the notifications center!")
         return asyncio.run(get_notifications(html,Session))
     finally:
@@ -53,9 +53,9 @@ def test():
 @app.route("/schedule")
 @requires_basic_auth
 def wel():
+    username,password = get_creds()
+    schedule,client = asyncio.run(get_schedule(username,password))
     try:
-        username,password = get_creds()
-        schedule,client = asyncio.run(get_schedule(username,password))
         return schedule
     finally:
         asyncio.run(client.aclose())
@@ -63,9 +63,9 @@ def wel():
 @app.route("/courses")
 @requires_basic_auth
 def courses():
+    username,password = get_creds()
+    Session,moodle_html = asyncio.run(login_moodle(username,password))
     try:
-        username,password = get_creds()
-        Session,moodle_html = asyncio.run(login_moodle(username,password))
         return asyncio.run(get_courses(moodle_html,Session))
     finally:
         asyncio.run(Session.aclose())
