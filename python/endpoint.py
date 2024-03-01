@@ -19,12 +19,6 @@ def my_format(item, description=None, level=logging.info):
         return level(f"{description}: {item}")
     return level(f"{item}")
 
-# def url_encode(vals : dict):
-#     temp : list[str] = []
-#     for i, j in enumerate(list(zip(vals, vals.values()))):
-#         temp[i] = "=".join(j)
-#     return "&".join(temp)
-
 
 def soup_bowl(html): return BeautifulSoup(html, "lxml")
 
@@ -169,35 +163,37 @@ async def login_moodle(username : str, password : str):
     
 async def get_schedule(username:str,password:str):
     #TODO : also make a more efficient login mechanism because this takes way too long
-    course_session, course_html = await login_moodle(username,password) 
-    courses = await get_courses(course_html,course_session)
-    mappings = {item["shortname"].split("-")[0]: " ".join(word for word in re.sub(r'[^a-zA-Z\s]'," ",  html.unescape(
-        item["fullname"])).strip().split() if not word.isspace())  for item in courses[0]["data"]["courses"]}
-    await course_session.aclose() # we don't need this session anymore, make a new one
-    _, response = await login("http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",username,password)
+    # course_session, course_html = await login_moodle(username,password) 
+    # courses = await get_courses(course_html,course_session)
+    # mappings = {item["shortname"].split("-")[0]: " ".join(word for word in re.sub(r'[^a-zA-Z\s]'," ",  html.unescape(
+    #     item["fullname"])).strip().split() if not word.isspace())  for item in courses[0]["data"]["courses"]}
+    # await course_session.aclose() # we don't need this session anymore, make a new one
+    # _, response = await login("http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",username,password)
     # we want to parse the html from it
     # uncomment this for testing
-    # response = open("./scratch.html").read()
+    response = open("./scratch.html").read()
     json_response = []
     soop = soup_bowl(response)
     course_items = list(i.text for i in soop.select(".ddlabel > a"))
     for course in course_items:
-        subject_key = course.split("-")[0]
+        # subject_key = course.split("-")[0]
         crn = course.split("-")[1][:course.split("-")[1].find(" ")]
         crn = re.sub(r"\s","",crn)
         subject_key = re.sub(r"\s","",subject_key)
-        subject = mappings[subject_key]
+        # subject = mappings[subject_key]
         time = re.search(r"\d+:\d+\s[ampm]+-\d+:\d+\s[ampm]+",course)
         location = re.search(r"[^ampm]+ E\w+\d+",course)  
         if not time or not location:
             raise Exception("Couldn't find time or location for course!")
         
         json_response.append({
-        "subject" : subject,
+        "CRN number" : crn,
+        # "subject" : subject,
         "time" : time.group(),
         "location" : location.group(),
         })
-    return {"Courses" : json_response}, _
+    # return {"Courses" : json_response}, _
+    return {"Courses" : json_response}
     # return course_items,_
 
 

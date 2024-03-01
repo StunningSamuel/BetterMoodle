@@ -54,11 +54,13 @@ def test():
 @requires_basic_auth
 def wel():
     username,password = get_creds()
-    schedule,client = asyncio.run(get_schedule(username,password))
-    try:
-        return schedule
-    finally:
-        asyncio.run(client.aclose())
+    # schedule,client = asyncio.run(get_schedule(username,password))
+    schedule = asyncio.run(get_schedule(username,password))
+    return schedule
+    # try:
+    #     return schedule
+    # finally:
+    #     asyncio.run(client.aclose())
 
 @app.route("/courses")
 @requires_basic_auth
