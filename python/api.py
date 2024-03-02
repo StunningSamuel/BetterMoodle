@@ -6,6 +6,8 @@ from functools import wraps
 from dotenv import load_dotenv
 import nest_asyncio
 import asyncio
+
+from registration import register_courses
 app = Flask(__name__)
 load_dotenv()
 app.secret_key = os.environ.get("SECRET_KEY")
@@ -69,6 +71,14 @@ def courses():
         return asyncio.run(get_courses(moodle_html,Session))
     finally:
         asyncio.run(Session.aclose())
+
+@app.route("/register",methods=["POST"])
+@requires_basic_auth
+def register():
+    courses = request.form["courses"]
+    username,password = get_creds()
+    register_courses(courses,username,password)
+    return "OK",200
 
 if __name__ == "__main__":
     app.run("0.0.0.0",debug=False)
