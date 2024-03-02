@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+
+    android:background="@drawable/bettermoodlemk1">
+
+    <Button
+        android:id="@+id/schedule_button"
+        android:layout_width="350dp"
+        android:layout_marginLeft="30dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="250dp"
+        android:backgroundTint="@color/MoodleOrange"
+        android:fontFamily="@font/comfortaacegular"
+        android:text="View Schedule"
+        android:textStyle="bold"
+        />
+
+    <Button
+        android:id="@+id/notifications_button"
+        android:layout_width="350dp"
+        android:layout_marginLeft="30dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="30dp"
+        android:text="View Notifications"
+        android:fontFamily="@font/comfortaacegular"
+        android:backgroundTint="@color/MoodleOrange"
+        android:textStyle="bold"/>
+
+    <Button
+        android:id="@+id/Registration_Button"
+        android:layout_width="350dp"
+        android:layout_marginLeft="30dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="30dp"
+        android:text="Register Courses"
+        android:textStyle="bold"
+        android:fontFamily="@font/comfortaacegular"
+        android:backgroundTint="@color/MoodleOrange"/>
+
+    <Button
+        android:id="@+id/backbtn"
+        android:layout_width="100dp"
+        android:layout_height="60dp"
+        android:layout_marginLeft="150dp"
+        android:layout_marginTop="30dp"
+        android:backgroundTint="@color/black"
+        android:fontFamily="@font/comfortaacegular"
+        android:onClick="backbtn"
+        android:text="Go Back"
+        android:textStyle="bold" />
+
+
+
+
+
+</LinearLayout>
