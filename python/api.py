@@ -18,7 +18,7 @@ def requires_basic_auth(func):
 
     def decorated_function(*args, **kwargs):
         if not request.authorization:
-            return abort(400)
+            return abort(401) # Not authorized
         return func(*args, **kwargs)
     
     return decorated_function

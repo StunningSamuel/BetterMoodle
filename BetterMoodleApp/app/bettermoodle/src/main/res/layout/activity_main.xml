@@ -77,7 +77,7 @@
                 android:layout_marginTop="10dp"
                 android:backgroundTint="@color/MoodleOrange"
                 android:fontFamily="@font/comfortaacegular"
-                android:onClick="loginbutton"
+                android:onClick="loginButton"
                 android:padding="3dp"
                 android:text="LET ME IN!"
                 android:textSize="20sp"
