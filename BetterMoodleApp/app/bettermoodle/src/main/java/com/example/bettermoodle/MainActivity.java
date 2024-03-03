@@ -1,4 +1,6 @@
 package com.example.bettermoodle;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,11 +17,12 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
+    OkHttpClient client;
+    String getURL = "http://127.0.0.1:5000/schedule";
 
     EditText userid;
     EditText password;
     Button loginbutton;
-    OkHttpClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
