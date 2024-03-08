@@ -3,9 +3,10 @@ import logging
 import re
 from typing import Union
 from bs4 import BeautifulSoup
-from fake_useragent import UserAgent
 import nest_asyncio
 import httpx
+from fake_useragent import UserAgent
+from datetime import datetime
 nest_asyncio.apply()
 
 LOGIN_URL = r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php"
@@ -61,7 +62,7 @@ api_payload = [
         "index": 0,
         "methodname": "message_popup_get_popup_notifications",
         "args": {
-            "limit": 20,
+            "limit": 30,
             "offset": 0,
             "useridto": ""
         }
@@ -138,6 +139,53 @@ api_headers = {
 
 }
 
+async def get_calendar(moodle_html : str , Session : httpx.AsyncClient):
+    sesskey, _ = get_user_info(moodle_html)
+    now = datetime.now()
+    payload =  [
+          {
+        "index": 0,
+        "methodname": "core_calendar_get_calendar_monthly_view",
+        "args": {
+            "year": now.year,
+            "month": now.month,
+            "courseid": 1,
+            "categoryid": 0,
+            "includenavigation": False,
+            "mini": True,
+            "day": now.day
+        }
+    }
+    ]
+    courses_querystring = {
+        "sesskey": sesskey, "info": "core_course_get_recent_courses"}
+    courses = await Session.post(url=SERIVCE_URL,
+                                    headers=service_headers,
+                                    json=payload,
+                                    params=courses_querystring)
+    required_json = courses.json()
+    return required_json
+
+async def get_recent_courses(moodle_html : str, Session : httpx.AsyncClient):
+    sesskey, userid = get_user_info(moodle_html)
+    payload =  [
+    {
+        "index": 0,
+        "methodname": "core_course_get_recent_courses",
+        "args": {
+            "userid": userid,
+            "limit": 10
+        }
+    }
+    ]
+    courses_querystring = {
+        "sesskey": sesskey, "info": "core_course_get_recent_courses"}
+    courses = await Session.post(url=SERIVCE_URL,
+                                    headers=service_headers,
+                                    json=payload,
+                                    params=courses_querystring)
+    required_json = courses.json()
+    return required_json
 
 
 async def login(referer : str, username : str, password : str):

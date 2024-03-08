@@ -1,7 +1,7 @@
 import http
 import os
 from flask import Flask, abort, request
-from endpoint import get_courses, get_mappings, get_notifications, get_schedule, login_moodle
+from endpoint import get_courses, get_mappings, get_notifications, get_recent_courses, get_schedule, login_moodle
 from functools import wraps
 from dotenv import load_dotenv
 import asyncio
@@ -48,6 +48,25 @@ def get_creds():
 def home():
     return "-------------------------Welcome to Better Moodle--------------------"
 
+@app.route("/calendar")
+@requires_basic_auth
+def calendar():
+    username,password = get_creds()
+    Session,moodle_html = asyncio.run(login_moodle(username,password))
+    try:
+        return asyncio.run(get_recent_courses(moodle_html,Session))
+    finally:
+        asyncio.run(Session.aclose())
+
+@app.route("/recent_courses")
+@requires_basic_auth
+def most_recent():
+    username,password = get_creds()
+    Session,moodle_html = asyncio.run(login_moodle(username,password))
+    try:
+        return asyncio.run(get_recent_courses(moodle_html,Session))
+    finally:
+        asyncio.run(Session.aclose())
 
 @app.route("/mappings")
 @requires_basic_auth

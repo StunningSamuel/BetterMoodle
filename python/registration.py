@@ -1,18 +1,9 @@
-import asyncio
-from os import path
-from pathlib import Path
-from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
+import re
 import asyncio
 import httpx
 import nest_asyncio
 nest_asyncio.apply()
-from endpoint import css_selector
-
-
-service = Service(str(Path("./bot_data_stuff/geckodriver").resolve()),log_output=path.devnull)
-options = webdriver.FirefoxOptions()
-options.binary_location = "/usr/bin/firefox-trunk"
+from endpoint import css_selector, soup_bowl
 
 
 def click_and_send(elem, text):
@@ -66,7 +57,14 @@ async def register_courses(crn_numbers : str, username:str, _password:str):
                        })
     # Then go back to registration page
     fake_response = await Session.get("http://ban-prod-ssb2.bau.edu.lb:7750/PROD/bwskfreg.P_AltPin")
-    # Then close the session once we ge the response
+    response_bowl = soup_bowl(fake_response)
+    crn_ids = response_bowl.find_all(re.compile(r"crn_id\d+"))
     asyncio.run(Session.aclose())
-    # For demonstration only
-    return fake_response.text
+    # we don't have a time ticket, return the HTML of the registration page
+    if not crn_ids:
+        # Then close the session once we ge the response
+        # For demonstration only
+        return fake_response.text
+    else:
+        # actually register the user otherwise
+        return "still not implemented"
