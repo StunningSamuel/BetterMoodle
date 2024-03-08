@@ -3,7 +3,10 @@ import logging
 import re
 from typing import Union
 from bs4 import BeautifulSoup
+from fake_useragent import UserAgent
+import nest_asyncio
 import httpx
+nest_asyncio.apply()
 
 LOGIN_URL = r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php"
 SECURE_URL = r"https://moodle.bau.edu.lb/my/"
@@ -95,24 +98,26 @@ service_headers = {
     'Sec-Fetch-User': "?1",
     'Sec-GPC': "1"
 }
+
+ua = UserAgent(browsers=["chrome","edge","firefox"],os=["windows","macos"])
+
 courses_querystring = {
     "service": "https://moodle.bau.edu.lb/login/index.php"}
 login_headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.7113.93 Safari/537.36",
+    "User-Agent": ua.random,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/jxl,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
     "Accept-Encoding": "gzip, deflate, br",
     "Content-Type": "application/x-www-form-urlencoded",
-    "Origin": "https://icas.bau.edu.lb:8443",
     "DNT": "1",
     "Connection": "keep-alive",
-    # "Referer": r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php",
     "Upgrade-Insecure-Requests": "1",
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "same-origin",
     "Sec-Fetch-User": "?1",
-    "Sec-GPC": "1"}
+    "Sec-GPC": "1",
+    }
 
 api_headers = {
     'User-Agent': "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.7113.93 Safari/537.36",
@@ -136,41 +141,44 @@ api_headers = {
 
 
 async def login(referer : str, username : str, password : str):
-    unencoded_url = fr"https://icas.bau.edu.lb:8443/cas/login?service={referer}"
-    login_headers["Referer"] = unencoded_url
-    my_format(unencoded_url, "Login URL is")
+    url = "https://icas.bau.edu.lb:8443/cas/login"
+    params = {"service" : referer}
     Session = httpx.AsyncClient(follow_redirects=True)
-    page = await Session.get(url=unencoded_url)
+    page = await Session.get(url=url,headers=login_headers,params=params)
     my_format("HTML exists  ", f"{bool(page.text)}")
     execution = css_selector(page.text, "[name=execution]", "value")
     my_format("execution string: ", execution)
-    l = await Session.post(unencoded_url,
+    l = await Session.post("https://icas.bau.edu.lb:8443/cas/login",
                             data={"username": username,
                                 "password": password,
                                 "execution": fr"{execution}", "_eventId": "submit",
                                 "geolocation": ""}, 
                             headers=login_headers,
+                            params={"service" : referer},
                             timeout=None)
     my_format(l.url, "We are on")
     Session.cookies.extract_cookies(l)
     return Session, l.text
 
 async def login_moodle(username : str, password : str):
-    return await login("https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php",username,password)
+    return await login("https://moodle.bau.edu.lb/login/index.php",username,password)
 
 
-    
-async def get_schedule(username:str,password:str):
-    #TODO : also make a more efficient login mechanism because this takes way too long
+async def get_mappings(username:str,password:str):
     course_session, course_html = await login_moodle(username,password) 
     courses = await get_courses(course_html,course_session)
     mappings = {item["shortname"].split("-")[0]: " ".join(word for word in re.sub(r'[^a-zA-Z\s]'," ",  html.unescape(
         item["fullname"])).strip().split() if not word.isspace())  for item in courses[0]["data"]["courses"]}
     await course_session.aclose() # we don't need this session anymore, make a new one
+    return mappings
+    
+async def get_schedule(username:str,password:str):
+    #TODO : also make a more efficient login mechanism because this takes way too long
     _, response = await login("http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",username,password)
     # we want to parse the html from it
     # uncomment this for testing
     # response = open("./scratch.html").read()
+    mappings = await get_mappings(username,password)
     json_response = []
     soop = soup_bowl(response)
     course_items = list(i.contents for i in soop.select(".ddlabel > a"))
