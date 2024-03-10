@@ -151,13 +151,13 @@ async def get_mappings(Session: httpx.AsyncClient, username: str, password: str)
 
 async def get_schedule(Session: httpx.AsyncClient, username: str, password: str):
     # TODO : also make a more efficient login mechanism because this takes way too long
-    mappings = await get_mappings(Session, username, password)
-    _, response = await login(
+    Session, response = await login(
         Session,
         "http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",
         username,
         password,
     )
+    mappings = await get_mappings(Session, username, password)
     # we want to parse the html from it
     # uncomment this for testing
     # response = open("./scratch.html").read()
@@ -172,6 +172,7 @@ async def get_schedule(Session: httpx.AsyncClient, username: str, password: str)
         if not time:
             raise Exception("Couldn't find time for course!")
         subject = mappings[re.sub(r"\s", "", subject_key)]
+        # subject = re.sub(r"\s", "", subject_key)
         json_response.append(
             {
                 "CRN number": crn,
@@ -247,12 +248,27 @@ async def moodle_api(
     userid_field = request_json["id_field"]
 
     moodle_html = ""
+    # check that we actually HAVE moodle cookies!
+    # We may have logged in and obtained cookies for another service!
+    moodle_cookies = next(
+        filter(lambda cookie: "Moodle" in cookie.domain, Session.cookies.jar), None
+    )
+    # If we have NO cookies at ALL, just login to moodle.
+    # Or if we do have cookies,we will just get sent back to login page if we have no moodle cookies
     if not Session.cookies.jar:
-        # first request, login to moodle
         Session, moodle_html = await login_moodle(Session, username, password)
     else:
-        # already logged in, just get the moodle page
-        moodle_html = (await Session.get(SECURE_URL)).text
+        # we do have cookies, but they are not moodle cookies. We can bypass the login anyway
+        # the moodle dashboard will be returned
+        if not moodle_cookies:
+            url = "https://icas.bau.edu.lb:8443/cas/login"
+            params = {"service": "https://moodle.bau.edu.lb/login/index.php"}
+            moodle_html = (
+                await Session.get(url=url, headers=login_headers, params=params)
+            ).text
+        else:
+            # we have moodle cookies, just get the page
+            moodle_html = (await Session.get(SECURE_URL)).text
 
     sesskey, userid = get_user_info(moodle_html)
     api_payload = [
