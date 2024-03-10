@@ -1,6 +1,4 @@
 package com.example.bettermoodle;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -18,7 +16,6 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     OkHttpClient client;
-    String getURL = "http://127.0.0.1:5000/schedule";
 
     EditText userid;
     EditText password;
@@ -39,19 +36,16 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             Request request = new Request.Builder()
                     // let's test the schedule endpoint for now
-                    .url("https://httpbin.org/anything")
+                    .url("http://192.168.1.14:5000/")
                     .build();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    // Do network action in this function
-                    try (Response response = client.newCall(request).execute()) {
-                        Log.d("HTTP Tag", response.isSuccessful() ? "200" : "401");
-                        assert response.body() != null;
-                        Log.d("HTTP Tag", "We got this response: " + response.body());
-                    } catch (IOException e) {
-                        throw new RuntimeException("Couldn't make network requests!");
-                    }
+            new Thread(() -> {
+                // Do network action in this function
+                try (Response response = client.newCall(request).execute()) {
+                    Log.d("HTTP Tag", String.valueOf(response.code()));
+                    assert response.body() != null;
+                    Log.d("HTTP Tag", "We got this response: " + response.body());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }).start();
 
