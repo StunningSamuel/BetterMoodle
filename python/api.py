@@ -6,7 +6,7 @@ import httpx
 from functools import wraps
 from dotenv import load_dotenv
 import asyncio
-from endpoint import get_mappings, get_schedule, moodle_api
+from endpoint import InvalidSessionKeyException, get_mappings, get_schedule, moodle_api
 from registration import register_courses
 
 app = Flask(__name__)
@@ -81,14 +81,16 @@ def get_mappings_endpoint():
 @requires_basic_auth
 def moodle_route_variable(endpoint: str):
     username, password = get_creds()
+    # we got cookies from the user, add them to the session object
+    session_key = None
+    if request.json:
+        session_key = request.json["sesskey"]
+        for cookie in request.json["cookies"]:
+            Session.cookies.set(**cookie)
+
     try:
         return asyncio.run(
-            moodle_api(
-                Session,
-                username,
-                password,
-                endpoint,
-            )
+            moodle_api(Session, username, password, endpoint, session_key)
         )
 
     except AssertionError:
@@ -97,7 +99,7 @@ def moodle_route_variable(endpoint: str):
                 http.HTTPStatus.BAD_REQUEST, "Moodle has no such endpoint!"
             )
         )
-    except AttributeError:
+    except InvalidSessionKeyException:
         return abort(
             return_error_json(
                 http.HTTPStatus.INTERNAL_SERVER_ERROR,

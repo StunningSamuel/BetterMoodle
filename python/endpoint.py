@@ -15,6 +15,11 @@ SERIVCE_URL = r"https://moodle.bau.edu.lb/lib/ajax/service.php"
 cookie_jar = dict()
 ua = UserAgent(browsers=["chrome", "firefox"], os=["windows", "macos"])
 
+
+class InvalidSessionKeyException(Exception):
+    pass
+
+
 ### Utilities
 
 
@@ -50,16 +55,18 @@ def get_user_info(moodle_html: str):
     return sesskey, userid
 
 
-def serialize_session_cookies(dict_to_modify: dict, Session: httpx.AsyncClient):
+def serialize_session_cookies(
+    dict_to_modify: dict, Session: httpx.AsyncClient, sesskey: str | None = None
+):
     cookie_jar = Session.cookies.jar
+    if sesskey:
+        dict_to_modify["sesskey"] = sesskey
     dict_to_modify["cookies"] = [
         {
             "name": cookie.name,
             "value": cookie.value,
             "domain": cookie.domain,
-            "expires_in": cookie.expires,
             "path": cookie.path,
-            "expired": cookie.is_expired(),
         }
         for cookie in cookie_jar
     ]
@@ -167,7 +174,11 @@ async def get_mappings(Session: httpx.AsyncClient, username: str, password: str)
     return mappings
 
 
-async def get_schedule(Session: httpx.AsyncClient, username: str, password: str):
+async def get_schedule(
+    Session: httpx.AsyncClient,
+    username: str,
+    password: str,
+):
     # TODO : also make a more efficient login mechanism because this takes way too long
     Session, response = await login(
         Session,
@@ -210,6 +221,7 @@ async def moodle_api(
     username: str,
     password: str,
     endpoint: str,
+    session_key: str | None = None,
 ):
     """
     @param Session : the server's global session.
@@ -218,6 +230,7 @@ async def moodle_api(
     @param api_querystring: URL encoded query for each moodle API.
     @param api_args : the arguments for the called moodle method.
     @param needs_userid : not all moodle APIs need the useridto argument .
+    @param session_key : if we already have a cached sesskey, we can just use that instead of even requesting the moodle page
 
     """
     now = datetime.now()
@@ -268,12 +281,41 @@ async def moodle_api(
     assert request_json, "Request JSON is empty!"
     userid_field = request_json["id_field"]
 
+    async def make_final_request(sesskey: str):
+        api_payload = [
+            {
+                "index": 0,
+                "methodname": request_json["method_name"],
+                "args": request_json["args"],
+            }
+        ]
+        if userid_field:
+            api_payload[0]["args"][userid_field] = userid
+
+        api_querystring = {"sesskey": sesskey, "info": request_json["method_name"]}
+        api_response = await Session.post(
+            url=SERIVCE_URL,
+            headers=service_headers,
+            json=api_payload,
+            params=api_querystring,
+        )
+        # at the end of every request, return the current cookies
+        response_json = api_response.json()[0]
+        serialize_session_cookies(response_json, Session, sesskey)
+        return response_json
+
     moodle_html = ""
     # check that we actually HAVE moodle cookies!
     # We may have logged in and obtained cookies for another service!
     moodle_cookies = next(
         filter(lambda cookie: "Moodle" in cookie.domain, Session.cookies.jar), None
     )
+
+    # if we already have a sesskey, just use it
+    if session_key:
+        return await make_final_request(session_key)
+
+    # otherwise we have to get it from moodle
     # If we have NO cookies at ALL, just login to moodle.
     if not Session.cookies.jar:
         Session, moodle_html = await login_moodle(Session, username, password)
@@ -290,25 +332,9 @@ async def moodle_api(
             # we have moodle cookies, just get the page
             moodle_html = (await Session.get(SECURE_URL)).text
 
-    sesskey, userid = get_user_info(moodle_html)
-    api_payload = [
-        {
-            "index": 0,
-            "methodname": request_json["method_name"],
-            "args": request_json["args"],
-        }
-    ]
-    if userid_field:
-        api_payload[0]["args"][userid_field] = userid
+    try:
+        sesskey, userid = get_user_info(moodle_html)
+    except AttributeError:
+        raise InvalidSessionKeyException
 
-    api_querystring = {"sesskey": sesskey, "info": request_json["method_name"]}
-    api_response = await Session.post(
-        url=SERIVCE_URL,
-        headers=service_headers,
-        json=api_payload,
-        params=api_querystring,
-    )
-    # at the end of every request, return the current cookies
-    response_json = api_response.json()[0]
-    serialize_session_cookies(response_json, Session)
-    return response_json
+    return await make_final_request(sesskey)
