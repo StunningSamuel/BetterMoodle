@@ -50,6 +50,23 @@ def get_user_info(moodle_html: str):
     return sesskey, userid
 
 
+def serialize_session_cookies(dict_to_modify: dict, Session: httpx.AsyncClient):
+    cookie_jar = Session.cookies.jar
+    dict_to_modify["cookies"] = [
+        {
+            "name": cookie.name,
+            "value": cookie.value,
+            "domain": cookie.domain,
+            "expires_in": cookie.expires,
+            "path": cookie.path,
+            "expired": cookie.is_expired(),
+        }
+        for cookie in cookie_jar
+    ]
+
+
+### End utilities
+
 service_headers = {
     "User-Agent": ua.random,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/jxl,image/webp,*/*;q=0.8",
@@ -144,8 +161,9 @@ async def get_mappings(Session: httpx.AsyncClient, username: str, password: str)
             .split()
             if not word.isspace()
         )
-        for item in courses[0]["data"]["courses"]
+        for item in courses["data"]["courses"]
     }
+    serialize_session_cookies(mappings, Session)
     return mappings
 
 
@@ -181,7 +199,10 @@ async def get_schedule(Session: httpx.AsyncClient, username: str, password: str)
                 "location": location,
             }
         )
-    return {"Courses": json_response}
+
+    final_json = {"Courses": json_response}
+    serialize_session_cookies(final_json, Session)
+    return final_json
 
 
 async def moodle_api(
@@ -254,7 +275,6 @@ async def moodle_api(
         filter(lambda cookie: "Moodle" in cookie.domain, Session.cookies.jar), None
     )
     # If we have NO cookies at ALL, just login to moodle.
-    # Or if we do have cookies,we will just get sent back to login page if we have no moodle cookies
     if not Session.cookies.jar:
         Session, moodle_html = await login_moodle(Session, username, password)
     else:
@@ -288,4 +308,7 @@ async def moodle_api(
         json=api_payload,
         params=api_querystring,
     )
-    return api_response.json()
+    # at the end of every request, return the current cookies
+    response_json = api_response.json()[0]
+    serialize_session_cookies(response_json, Session)
+    return response_json
