@@ -19,7 +19,6 @@ import okhttp3.Route;
 
 public class MainActivity extends AppCompatActivity {
     OkHttpClient client;
-
     EditText userid;
     EditText password;
     Button loginbutton;

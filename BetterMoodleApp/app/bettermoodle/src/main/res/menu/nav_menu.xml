@@ -8,6 +8,14 @@
         android:checkableBehavior="single">
 
         <item
+            android:id="@+id/nav_home"
+            android:icon="@drawable/baseline_add_home_24"
+            android:title="Home"
+            android:fontFamily="@font/comfortaacegular"
+            android:textColor="@color/white"
+            android:textStyle="bold"/>
+
+        <item
             android:id="@+id/nav_schedule"
             android:icon="@drawable/baseline_schedule_24"
             android:title="Schedule"
@@ -38,13 +46,6 @@
             android:fontFamily="@font/comfortaacegular"
             android:textColor="@color/white"
             android:textStyle="bold"/>
-
-
-
-
-
-
-
     </group>
 
 </menu>
