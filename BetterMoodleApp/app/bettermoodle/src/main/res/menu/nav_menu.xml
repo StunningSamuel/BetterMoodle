@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn = "navigation_view">
+
+    <group
+        android:checkableBehavior="single">
+
+        <item
+            android:id="@+id/nav_schedule"
+            android:icon="@drawable/baseline_schedule_24"
+            android:title="Schedule"
+            android:fontFamily="@font/comfortaacegular"
+            android:textColor="@color/white"
+            android:textStyle="bold"/>
+
+        <item
+            android:id="@+id/nav_notify"
+            android:icon="@drawable/baseline_announcement_24"
+            android:title="Notifications"
+            android:fontFamily="@font/comfortaacegular"
+            android:textColor="@color/white"
+            android:textStyle="bold"/>
+
+        <item
+            android:id="@+id/reg_button"
+            android:icon="@drawable/baseline_app_registration_24"
+            android:title="Register"
+            android:fontFamily="@font/comfortaacegular"
+            android:textColor="@color/white"
+            android:textStyle="bold"/>
+
+        <item
+            android:id="@+id/logoutbutton"
+            android:icon="@drawable/baseline_arrow_back_24"
+            android:title="Logout"
+            android:fontFamily="@font/comfortaacegular"
+            android:textColor="@color/white"
+            android:textStyle="bold"/>
+
+
+
+
+
+
+
+    </group>
+
+</menu>

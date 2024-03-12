@@ -3,7 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-
     android:background="@drawable/bettermoodlemk1">
 
     <Button
@@ -15,6 +14,7 @@
         android:backgroundTint="@color/MoodleOrange"
         android:fontFamily="@font/comfortaacegular"
         android:text="View Schedule"
+        android:textColor="@color/white"
         android:textStyle="bold"
         />
 
@@ -25,6 +25,7 @@
         android:layout_height="60dp"
         android:layout_marginTop="30dp"
         android:text="View Notifications"
+        android:textColor="@color/white"
         android:fontFamily="@font/comfortaacegular"
         android:backgroundTint="@color/MoodleOrange"
         android:textStyle="bold"/>
@@ -37,6 +38,7 @@
         android:layout_marginTop="30dp"
         android:text="Register Courses"
         android:textStyle="bold"
+        android:textColor="@color/white"
         android:fontFamily="@font/comfortaacegular"
         android:backgroundTint="@color/MoodleOrange"/>
 
@@ -50,6 +52,7 @@
         android:fontFamily="@font/comfortaacegular"
         android:onClick="backbtn"
         android:text="Go Back"
+        android:textColor="@color/white"
         android:textStyle="bold" />
 
 

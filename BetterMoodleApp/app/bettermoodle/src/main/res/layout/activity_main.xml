@@ -16,6 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="30dp"
+        android:backgroundTint="@color/white"
         android:background="@drawable/loginwrapper"
         app:cardElevation="30dp">
 
@@ -78,6 +79,7 @@
                 android:onClick="loginButton"
                 android:padding="3dp"
                 android:text="LET ME IN!"
+                android:textColor="@color/white"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
