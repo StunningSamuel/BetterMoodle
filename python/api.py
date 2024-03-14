@@ -6,13 +6,18 @@ import httpx
 from functools import wraps
 from dotenv import load_dotenv
 import asyncio
-from endpoint import InvalidSessionKeyException, get_mappings, get_schedule, moodle_api
+from endpoint import (
+    get_mappings,
+    get_schedule,
+    moodle_api,
+    serialize_session_cookies,
+)
 from registration import register_courses
 
 app = Flask(__name__)
 load_dotenv()
 app.secret_key = os.environ.get("SECRET_KEY")
-Session = httpx.AsyncClient(timeout=None, follow_redirects=True)
+Session = httpx.Client(timeout=None, follow_redirects=True)
 
 
 def return_error_json(code: int, reason: str):
@@ -65,45 +70,52 @@ def home():
     return "-------------------------Welcome to Better Moodle--------------------"
 
 
+@app.after_request
+def add_metadata(response: Response):
+    try:
+        response_json = json.loads(response.get_data().decode())
+        # after every request, we simply add the session cookies and a time stamp
+        # If the endpoint wants to add more metadata it can do so.
+        serialize_session_cookies(
+            response_json,
+            Session,
+        )
+        response.set_data(json.dumps(response_json).encode())
+        return response
+
+    except json.decoder.JSONDecodeError:
+        # we didn't get a json file
+        return response
+
+
 @app.route("/schedule")
 def get_schedule_endpoint():
     username, password = get_creds()
-    return asyncio.run(get_schedule(Session, username, password))
+    return get_schedule(Session, username, password)
 
 
 @app.route("/mappings")
 def get_mappings_endpoint():
     username, password = get_creds()
-    return asyncio.run(get_mappings(Session, username, password))
+    return get_mappings(Session, username, password)
 
 
 @app.route("/moodle/<endpoint>")
 @requires_basic_auth
 def moodle_route_variable(endpoint: str):
     username, password = get_creds()
-    # we got cookies from the user, add them to the session object
-    session_key = None
-    if request.json:
-        session_key = request.json["sesskey"]
-        for cookie in request.json["cookies"]:
-            Session.cookies.set(**cookie)
-
     try:
-        return asyncio.run(
-            moodle_api(Session, username, password, endpoint, session_key)
-        )
+        if request.content_type == "application/json":
+            # we got cookies from the user, add them to the session object
+            assert request.json != None, "Json is empty!"
+            for cookie in request.json["cookies"]:
+                Session.cookies.set(**cookie)
+        return moodle_api(Session, username, password, endpoint)
 
     except AssertionError:
         abort(
             return_error_json(
                 http.HTTPStatus.BAD_REQUEST, "Moodle has no such endpoint!"
-            )
-        )
-    except InvalidSessionKeyException:
-        return abort(
-            return_error_json(
-                http.HTTPStatus.INTERNAL_SERVER_ERROR,
-                "Sesskey expired! Please try again",
             )
         )
 

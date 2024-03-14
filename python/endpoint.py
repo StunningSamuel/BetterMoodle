@@ -3,21 +3,16 @@ import html
 import logging
 import re
 from bs4 import BeautifulSoup
-import nest_asyncio
+from flask import request
 import httpx
 from fake_useragent import UserAgent
 
-nest_asyncio.apply()
 
 LOGIN_URL = r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodle.bau.edu.lb%2Flogin%2Findex.php"
 SECURE_URL = r"https://moodle.bau.edu.lb/my/"
 SERIVCE_URL = r"https://moodle.bau.edu.lb/lib/ajax/service.php"
 cookie_jar = dict()
 ua = UserAgent(browsers=["chrome", "firefox"], os=["windows", "macos"])
-
-
-class InvalidSessionKeyException(Exception):
-    pass
 
 
 ### Utilities
@@ -56,11 +51,10 @@ def get_user_info(moodle_html: str):
 
 
 def serialize_session_cookies(
-    dict_to_modify: dict, Session: httpx.AsyncClient, sesskey: str | None = None
+    dict_to_modify: dict, Session: httpx.Client, sesskey: str | None = None
 ):
     cookie_jar = Session.cookies.jar
-    if sesskey:
-        dict_to_modify["sesskey"] = sesskey
+
     dict_to_modify["cookies"] = [
         {
             "name": cookie.name,
@@ -89,9 +83,6 @@ service_headers = {
     "Sec-GPC": "1",
 }
 
-
-# courses_querystring = {
-#     "service": "https://moodle.bau.edu.lb/login/index.php"}
 
 login_headers = {
     "User-Agent": ua.random,
@@ -127,14 +118,14 @@ api_headers = {
 }
 
 
-async def login(Session: httpx.AsyncClient, referer: str, username: str, password: str):
+def login(Session: httpx.Client, referer: str, username: str, password: str):
     url = "https://icas.bau.edu.lb:8443/cas/login"
     params = {"service": referer}
-    page = await Session.get(url=url, headers=login_headers, params=params)
+    page = Session.get(url=url, headers=login_headers, params=params)
     my_format("HTML exists  ", f"{bool(page.text)}")
     execution = css_selector(page.text, "[name=execution]", "value")
     my_format("execution string: ", execution)
-    l = await Session.post(
+    l = Session.post(
         "https://icas.bau.edu.lb:8443/cas/login",
         data={
             "username": username,
@@ -152,14 +143,14 @@ async def login(Session: httpx.AsyncClient, referer: str, username: str, passwor
     return Session, l.text
 
 
-async def login_moodle(Session: httpx.AsyncClient, username: str, password: str):
-    return await login(
+def login_moodle(Session: httpx.Client, username: str, password: str):
+    return login(
         Session, "https://moodle.bau.edu.lb/login/index.php", username, password
     )
 
 
-async def get_mappings(Session: httpx.AsyncClient, username: str, password: str):
-    courses = await moodle_api(Session, username, password, "courses")
+def get_mappings(Session: httpx.Client, username: str, password: str):
+    courses = moodle_api(Session, username, password, "courses")
     mappings = {
         item["shortname"].split("-")[0]: " ".join(
             word
@@ -170,23 +161,23 @@ async def get_mappings(Session: httpx.AsyncClient, username: str, password: str)
         )
         for item in courses["data"]["courses"]
     }
-    serialize_session_cookies(mappings, Session)
+    mappings["sesskey"] = courses["sesskey"]
     return mappings
 
 
-async def get_schedule(
-    Session: httpx.AsyncClient,
+def get_schedule(
+    Session: httpx.Client,
     username: str,
     password: str,
 ):
     # TODO : also make a more efficient login mechanism because this takes way too long
-    Session, response = await login(
+    Session, response = login(
         Session,
         "http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",
         username,
         password,
     )
-    mappings = await get_mappings(Session, username, password)
+    mappings = get_mappings(Session, username, password)
     # we want to parse the html from it
     # uncomment this for testing
     # response = open("./scratch.html").read()
@@ -212,16 +203,15 @@ async def get_schedule(
         )
 
     final_json = {"Courses": json_response}
-    serialize_session_cookies(final_json, Session)
+    final_json["sesskey"] = mappings["sesskey"]  # type: ignore
     return final_json
 
 
-async def moodle_api(
-    Session: httpx.AsyncClient,
+def moodle_api(
+    Session: httpx.Client,
     username: str,
     password: str,
     endpoint: str,
-    session_key: str | None = None,
 ):
     """
     @param Session : the server's global session.
@@ -279,9 +269,8 @@ async def moodle_api(
 
     request_json = endpoint_info.get(endpoint)
     assert request_json, "Request JSON is empty!"
-    userid_field = request_json["id_field"]
 
-    async def make_final_request(sesskey: str):
+    def make_final_request(sesskey: str, userid: str):
         api_payload = [
             {
                 "index": 0,
@@ -289,19 +278,20 @@ async def moodle_api(
                 "args": request_json["args"],
             }
         ]
+        userid_field = request_json["id_field"]
         if userid_field:
             api_payload[0]["args"][userid_field] = userid
 
         api_querystring = {"sesskey": sesskey, "info": request_json["method_name"]}
-        api_response = await Session.post(
+        api_response = Session.post(
             url=SERIVCE_URL,
             headers=service_headers,
             json=api_payload,
             params=api_querystring,
         )
         # at the end of every request, return the current cookies
-        response_json = api_response.json()[0]
-        serialize_session_cookies(response_json, Session, sesskey)
+        response_json: dict = api_response.json()[0]
+        response_json.update(sesskey=sesskey, userid=userid)
         return response_json
 
     moodle_html = ""
@@ -312,13 +302,17 @@ async def moodle_api(
     )
 
     # if we already have a sesskey, just use it
-    if session_key:
-        return await make_final_request(session_key)
+    if request.content_type == "application/json":
+        creds_json = request.json
+        assert creds_json
+        session_key = creds_json["sesskey"]
+        userid = creds_json["userid"]
+        return make_final_request(session_key, userid)
 
     # otherwise we have to get it from moodle
     # If we have NO cookies at ALL, just login to moodle.
     if not Session.cookies.jar:
-        Session, moodle_html = await login_moodle(Session, username, password)
+        Session, moodle_html = login_moodle(Session, username, password)
     else:
         # we do have cookies, but they are not moodle cookies. We can bypass the login anyway
         # the moodle dashboard will be returned
@@ -326,15 +320,12 @@ async def moodle_api(
             url = "https://icas.bau.edu.lb:8443/cas/login"
             params = {"service": "https://moodle.bau.edu.lb/login/index.php"}
             moodle_html = (
-                await Session.get(url=url, headers=login_headers, params=params)
+                Session.get(url=url, headers=login_headers, params=params)
             ).text
         else:
             # we have moodle cookies, just get the page
-            moodle_html = (await Session.get(SECURE_URL)).text
+            moodle_html = Session.get(SECURE_URL).text
 
-    try:
-        sesskey, userid = get_user_info(moodle_html)
-    except AttributeError:
-        raise InvalidSessionKeyException
+    sesskey, userid = get_user_info(moodle_html)
 
-    return await make_final_request(sesskey)
+    return make_final_request(sesskey, userid)
