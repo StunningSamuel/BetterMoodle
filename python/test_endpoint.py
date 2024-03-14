@@ -1,9 +1,8 @@
-import asyncio
 from http import HTTPStatus
 import json
 import unittest
 
-from httpx import Client, BasicAuth, request
+from httpx import Client, BasicAuth
 
 
 class APITest(unittest.TestCase):

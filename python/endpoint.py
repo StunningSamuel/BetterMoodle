@@ -73,8 +73,6 @@ def serialize_session_cookies(dict_to_modify: dict, Session: httpx.Client):
         for cookie in cookie_jar
     ]
 
-    dict_to_modify["timestamp"] = datetime.now().timestamp()
-
 
 ### End utilities
 
