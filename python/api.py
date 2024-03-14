@@ -10,6 +10,7 @@ from endpoint import (
     get_mappings,
     get_schedule,
     moodle_api,
+    return_error_json,
     serialize_session_cookies,
 )
 from registration import register_courses
@@ -18,16 +19,6 @@ app = Flask(__name__)
 load_dotenv()
 app.secret_key = os.environ.get("SECRET_KEY")
 Session = httpx.Client(timeout=None, follow_redirects=True)
-
-
-def return_error_json(code: int, reason: str):
-    return abort(
-        Response(
-            status=code,
-            content_type="application/json",
-            response=json.dumps({"error_reason": reason}),
-        )
-    )
 
 
 def requires_basic_auth(func):
@@ -39,13 +30,18 @@ def requires_basic_auth(func):
         # if any of these are None, abort
         if not auth or not username or not password:
             return abort(
-                Response(
-                    status=http.HTTPStatus.BAD_REQUEST, content_type="application/json"
+                return_error_json(
+                    http.HTTPStatus.BAD_REQUEST, "Username or password is missing!"
                 )
             )  # Not authorized
         # university IDs cannot have letters
         elif not username.isnumeric():
-            return abort(400)
+            return abort(
+                return_error_json(
+                    http.HTTPStatus.BAD_REQUEST,
+                    "University id {} is not valid.".format(username),
+                )
+            )
 
         # assuming all data is correct
         return func(*args, **kwargs)
@@ -72,8 +68,14 @@ def home():
 
 @app.after_request
 def add_metadata(response: Response):
+
     try:
         response_json = json.loads(response.get_data().decode())
+        if response_json.get("error"):
+            return return_error_json(
+                http.HTTPStatus.BAD_REQUEST, "Invalid or expired sesskey!"
+            )
+
         # after every request, we simply add the session cookies and a time stamp
         # If the endpoint wants to add more metadata it can do so.
         serialize_session_cookies(

@@ -29,9 +29,7 @@ class APITest(unittest.TestCase):
         ]
 
         for response in responses:
-            response_json = response.json()
             assert response.status_code == 200
-            assert response_json["error"] != True
 
         self.client.close()
 

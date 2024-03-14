@@ -1,9 +1,11 @@
 from datetime import datetime
 import html
+import http
+import json
 import logging
 import re
 from bs4 import BeautifulSoup
-from flask import request
+from flask import Response, abort, request
 import httpx
 from fake_useragent import UserAgent
 
@@ -16,6 +18,14 @@ ua = UserAgent(browsers=["chrome", "firefox"], os=["windows", "macos"])
 
 
 ### Utilities
+
+
+def return_error_json(code: int, reason: str):
+    return Response(
+        status=code,
+        content_type="application/json",
+        response=json.dumps({"error_reason": reason}),
+    )
 
 
 def my_format(item, description=None, level=logging.info):
@@ -326,6 +336,16 @@ def moodle_api(
             # we have moodle cookies, just get the page
             moodle_html = Session.get(SECURE_URL).text
 
-    sesskey, userid = get_user_info(moodle_html)
+    try:
+        sesskey, userid = get_user_info(moodle_html)
+
+    # we have been redirected to login page, credentials are wrong.
+    except AttributeError:
+        return abort(
+            return_error_json(
+                http.HTTPStatus.BAD_REQUEST,
+                "Provided credentials are wrong, please try again with correct ones.",
+            )
+        )
 
     return make_final_request(sesskey, userid)
