@@ -60,9 +60,7 @@ def get_user_info(moodle_html: str):
     return sesskey, userid
 
 
-def serialize_session_cookies(
-    dict_to_modify: dict, Session: httpx.Client, sesskey: str | None = None
-):
+def serialize_session_cookies(dict_to_modify: dict, Session: httpx.Client):
     cookie_jar = Session.cookies.jar
 
     dict_to_modify["cookies"] = [
@@ -74,6 +72,8 @@ def serialize_session_cookies(
         }
         for cookie in cookie_jar
     ]
+
+    dict_to_modify["timestamp"] = datetime.now().timestamp()
 
 
 ### End utilities
@@ -160,18 +160,27 @@ def login_moodle(Session: httpx.Client, username: str, password: str):
 
 
 def get_mappings(Session: httpx.Client, username: str, password: str):
-    courses = moodle_api(Session, username, password, "courses")
-    mappings = {
-        item["shortname"].split("-")[0]: " ".join(
-            word
-            for word in re.sub(r"[^a-zA-Z\s]", " ", html.unescape(item["fullname"]))
-            .strip()
-            .split()
-            if not word.isspace()
+    mappings = {}
+    courses = moodle_api(Session, username, password, "courses", mappings)
+    # we can't catch it in the after request processor because we're using this as an internal function
+    if courses["error"] == True:
+        return abort(
+            return_error_json(http.HTTPStatus.BAD_REQUEST, "Sesskey is logged out!")
         )
-        for item in courses["data"]["courses"]
-    }
-    mappings["sesskey"] = courses["sesskey"]
+
+    # assuming sesskey not expired, continue
+    mappings.update(
+        {
+            item["shortname"].split("-")[0]: " ".join(
+                word
+                for word in re.sub(r"[^a-zA-Z\s]", " ", html.unescape(item["fullname"]))
+                .strip()
+                .split()
+                if not word.isspace()
+            )
+            for item in courses["data"]["courses"]
+        }
+    )
     return mappings
 
 
@@ -180,14 +189,13 @@ def get_schedule(
     username: str,
     password: str,
 ):
-    # TODO : also make a more efficient login mechanism because this takes way too long
-    Session, response = login(
-        Session,
-        "http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd",
-        username,
-        password,
-    )
+    # get cookies from moodle on dry run because it is faster
     mappings = get_mappings(Session, username, password)
+    url = "https://icas.bau.edu.lb:8443/cas/login"
+    params = {
+        "service": "http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd"
+    }
+    response = Session.get(url, params=params, headers=login_headers)
     # we want to parse the html from it
     # uncomment this for testing
     # response = open("./scratch.html").read()
@@ -212,9 +220,8 @@ def get_schedule(
             }
         )
 
-    final_json = {"Courses": json_response}
-    final_json["sesskey"] = mappings["sesskey"]  # type: ignore
-    return final_json
+    mappings.update({"Courses": json_response})
+    return mappings
 
 
 def moodle_api(
@@ -222,15 +229,13 @@ def moodle_api(
     username: str,
     password: str,
     endpoint: str,
+    dict_to_modify: dict | None = None,
 ):
     """
     @param Session : the server's global session.
     @param username: the username from basic auth.
     @param password: the password from basic auth.
-    @param api_querystring: URL encoded query for each moodle API.
-    @param api_args : the arguments for the called moodle method.
-    @param needs_userid : not all moodle APIs need the useridto argument .
-    @param session_key : if we already have a cached sesskey, we can just use that instead of even requesting the moodle page
+    @param dict_to_modify : the dictionary to mutate in order to propagate the sesskey up the call chain. That is, if a function calls this function it will modify the top function's response.
 
     """
     now = datetime.now()
@@ -344,8 +349,13 @@ def moodle_api(
         return abort(
             return_error_json(
                 http.HTTPStatus.BAD_REQUEST,
-                "Provided credentials are wrong, please try again with correct ones.",
+                "Provided credentials are wrong or server overloaded, please try again with correct ones.",
             )
         )
 
-    return make_final_request(sesskey, userid)
+    final_json = make_final_request(sesskey, userid)
+    if dict_to_modify != None:
+        dict_to_modify.update(
+            sesskey=final_json["sesskey"], userid=final_json["userid"]
+        )
+    return final_json

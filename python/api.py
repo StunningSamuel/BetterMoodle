@@ -31,7 +31,7 @@ def requires_basic_auth(func):
         if not auth or not username or not password:
             return abort(
                 return_error_json(
-                    http.HTTPStatus.BAD_REQUEST, "Username or password is missing!"
+                    http.HTTPStatus.UNAUTHORIZED, "Username or password is missing!"
                 )
             )  # Not authorized
         # university IDs cannot have letters
@@ -90,19 +90,19 @@ def add_metadata(response: Response):
         return response
 
 
-@app.route("/schedule")
+@app.route("/schedule", methods=["GET", "POST"])
 def get_schedule_endpoint():
     username, password = get_creds()
     return get_schedule(Session, username, password)
 
 
-@app.route("/mappings")
+@app.route("/mappings", methods=["GET", "POST"])
 def get_mappings_endpoint():
     username, password = get_creds()
     return get_mappings(Session, username, password)
 
 
-@app.route("/moodle/<endpoint>")
+@app.route("/moodle/<endpoint>", methods=["GET", "POST"])
 @requires_basic_auth
 def moodle_route_variable(endpoint: str):
     username, password = get_creds()
