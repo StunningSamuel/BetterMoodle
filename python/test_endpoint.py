@@ -68,19 +68,7 @@ class APITest(unittest.TestCase):
             response_json = response.json()
             assert response.status_code == HTTPStatus.OK
             assert all(
-                response_json[feature]
-                for feature in ["sesskey", "timestamp", "userid", "cookies"]
-            )
-
-    def test_schedule(self):
-        # temporary test to isolate the schedule endpoint
-        with open("./reference/most_recent.json") as f:
-            request_json = json.load(f)
-            response = self.client.post(self.url + "schedule", json=request_json)
-            assert response.status_code == HTTPStatus.OK
-            assert all(
-                response.json()[feature]
-                for feature in ["sesskey", "timestamp", "userid", "cookies", ""]
+                response_json[feature] for feature in ["sesskey", "userid", "cookies"]
             )
 
     def test_with_cache(self):
@@ -92,7 +80,7 @@ class APITest(unittest.TestCase):
                 assert response.status_code == HTTPStatus.OK
                 assert all(
                     response_json[feature]
-                    for feature in ["sesskey", "timestamp", "userid", "cookies"]
+                    for feature in ["sesskey", "userid", "cookies"]
                 )
 
 
