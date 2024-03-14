@@ -12,6 +12,7 @@
         android:theme="@style/Theme.BetterMoodleApp">
         <activity
             android:name=".OptionPage2"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

@@ -16,6 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="30dp"
+        android:backgroundTint="@color/white"
         android:background="@drawable/loginwrapper"
         app:cardElevation="30dp">
 
@@ -78,20 +79,9 @@
                 android:onClick="loginButton"
                 android:padding="3dp"
                 android:text="LET ME IN!"
+                android:textColor="@color/white"
                 android:textSize="20sp"
                 android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/loginoutput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/black"
-                android:gravity="center"
-                android:layout_marginTop="10dp"
-                android:hint="Login Status"
-                android:textSize="20dp"
-                android:fontFamily="@font/comfortaacegular"/>
-
 
         </LinearLayout>
 
