@@ -1,9 +1,11 @@
+from dataclasses import dataclass, field
 from datetime import datetime
 import html
 import http
 import json
 import logging
 import re
+from typing import Callable
 from bs4 import BeautifulSoup
 from flask import Response, abort, request
 import httpx
@@ -72,6 +74,120 @@ def serialize_session_cookies(dict_to_modify: dict, Session: httpx.Client):
         }
         for cookie in cookie_jar
     ]
+
+
+class Notifications:
+    POSSIBLE_KEYWORDS = ["exam", "homework", "lecture"]
+
+    @dataclass
+    class Notification:
+        source_obj: dict
+
+        @property
+        def subject(self):
+            subject_code = self.source_obj["fullmessage"].split("-")[0]
+            return subject_code
+
+        @property
+        def time_created(self) -> datetime:
+            return datetime.fromtimestamp(self.source_obj["timecreated"])
+
+        @property
+        def message(self) -> str:
+            return (
+                self.source_obj["fullmessage"]
+                .strip("\n")
+                .split(
+                    "---------------------------------------------------------------------"
+                )[1]
+                .lower()
+            )
+
+        @property
+        def title(self) -> str:
+            return self.source_obj["subject"]
+
+        @property
+        def keywords(self):
+            types = (
+                dict.fromkeys(
+                    ("quiz", "test", "exam", "exams", "midterm", "final"), "exam"
+                )
+                | dict.fromkeys(("homework", "assignment", "hw", "solve"), "homework")
+                | dict.fromkeys(("grade", "mark"), "grades")
+                | dict.fromkeys(("lecture", "location", "session"), "lecture")
+            )
+            keywords_set = set()
+            whole_words_regex = re.compile("|".join(keyword for keyword in types))
+            # search title as well because there might be missing keywords
+            for result in whole_words_regex.findall(self.title + "\n\n" + self.message):
+                keywords_set.add(types[result])
+
+            return keywords_set
+
+        @property
+        def deadline(self):
+            return
+
+        def set_mappings(self, mappings: dict[str, str]):
+            self.mappings = mappings
+
+        def __str__(self) -> str:
+            """
+            Builds a string incrementally from object until it reaches a breakpoint (a field is missing)
+            """
+
+            def built_strings():
+                attributes = [
+                    name
+                    for name in dir(self)
+                    if not name.startswith("_") and name != "source_obj"
+                ][::-1]
+
+                for attribute in attributes:
+                    if getattr(self, attribute):
+                        yield f"{attribute} : {getattr(self,attribute)}"
+
+            padding = "=" * 30
+            return "\n".join(filter(None, built_strings())) + "\n" + padding + "\n"
+
+    def __init__(
+        self, json_objects: str, mappings: dict[str, str] | None = None
+    ) -> None:
+        self.notifications = [
+            self.Notification(obj)
+            for obj in json.loads(json_objects)["data"]["notifications"]
+        ]
+        if mappings:
+            for notification in self.notifications:
+                notification.set_mappings(mappings)
+
+    def search(self, query: str):
+
+        return list(
+            notification
+            for notification in self.notifications
+            if (notification.title + "\n\n" + notification.message).find(query) != -1
+        )
+
+    def filter_notifications(self, func: Callable[[Notification], bool]):
+
+        return list(filter(func, self.notifications))
+
+    def get_important(self):
+        return self.filter_notifications(lambda n: bool(n.keywords))
+
+    def get_keywords(self, keywords: list[str]):
+        return self.filter_notifications(
+            lambda notification: any(
+                keyword in keywords for keyword in notification.keywords
+            )
+        )
+
+    @staticmethod
+    def pretty_print(notifications: list[Notification]):
+        for notification in notifications:
+            print(notification)
 
 
 ### End utilities
