@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -52,17 +53,20 @@ public class MainActivity extends AppCompatActivity {
                     .build();
             new Thread(() -> {
                 Request request = new Request.Builder()
-                        .url("http://172.33.134.214:5000")
+                        .url("http://172.33.143.127:5000/moodle/notifications")
                         .build();
-
                 try (Response response = client.newCall(request).execute()) {
-                    if (!response.isSuccessful()) try {
-                        throw new IOException("Unexpected code " + response);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+                    if(response.isSuccessful())
+                    {
+                        startActivity(intent);
                     }
-                    startActivity(intent);
-                    System.out.println(response.body().string());
+                    else
+                    {
+                        Toast toast = Toast.makeText(this, "Oopsie", Toast.LENGTH_SHORT);
+                        toast.show();
+                    }
+                    Log.d("HTTP Tag", "We got this response: " + response.body().string());
+                    Log.d("HTTP Tag", "We got this code" + response.code());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
