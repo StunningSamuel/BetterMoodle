@@ -6,17 +6,14 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import java.io.IOException;
-
-import okhttp3.Authenticator;
-import okhttp3.Credentials;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.Route;
 
 public class MainActivity extends AppCompatActivity {
     OkHttpClient client;
@@ -31,46 +28,37 @@ public class MainActivity extends AppCompatActivity {
         userid = findViewById(R.id.userid);
         password = findViewById(R.id.password);
         loginbutton = findViewById(R.id.loginbutton);
-
         loginbutton.setOnClickListener(view -> {
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
             String user = userid.getText().toString(), pass = password.getText().toString();
+            BasicAuthInterceptor interceptor = new BasicAuthInterceptor(user, pass);
             client = new OkHttpClient.Builder()
-                    .authenticator(new Authenticator() {
-                        @Override public Request authenticate(Route route, Response response) throws IOException {
-                            if (response.request().header("Authorization") != null) {
-                                return null; // Give up, we've already attempted to authenticate.
-                            }
-
-                            System.out.println("Authenticating for response: " + response);
-                            System.out.println("Challenges: " + response.challenges());
-                            String credential = Credentials.basic(user, pass);
-                            return response.request().newBuilder()
-                                    .header("Authorization", credential)
-                                    .build();
-                        }
-                    })
+                    .addInterceptor(interceptor)
                     .build();
-            new Thread(() -> {
-                Request request = new Request.Builder()
-                        .url("http://172.33.143.127:5000/moodle/notifications")
-                        .build();
+            Request request = new Request.Builder()
+                    .url("http://192.168.1.14:5000/moodle/notifications")
+                    .build();
+            Future<Response> responseFuture = CompletableFuture.supplyAsync(() -> {
                 try (Response response = client.newCall(request).execute()) {
-                    if(response.isSuccessful())
-                    {
-                        startActivity(intent);
-                    }
-                    else
-                    {
-                        Toast toast = Toast.makeText(this, "Oopsie", Toast.LENGTH_SHORT);
-                        toast.show();
-                    }
-                    Log.d("HTTP Tag", "We got this response: " + response.body().string());
+                    Log.d("HTTP Tag", "We got this response: " + (response.body() != null ? response.body().string() : null));
                     Log.d("HTTP Tag", "We got this code" + response.code());
+                    return response;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-            }).start();
+            });
+            try {
+                Response response = responseFuture.get();
+                if (response.isSuccessful()) {
+                    startActivity(intent);
+                }
+                else {
+                    Toast.makeText(this,"Invalid Credentials!", Toast.LENGTH_SHORT).show();
+                }
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
 
         });
-    }}
+    }
+}
