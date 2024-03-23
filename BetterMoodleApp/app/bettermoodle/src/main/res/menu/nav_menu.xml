@@ -46,6 +46,15 @@
             android:fontFamily="@font/comfortaacegular"
             android:textColor="@color/white"
             android:textStyle="bold"/>
+
+        <item
+            android:id="@+id/settingsbutton"
+            android:icon="@drawable/baseline_admin_panel_settings_24"
+            android:title="Developer Settings"
+            android:fontFamily="@font/comfortaacegular"
+            android:textColor="@color/white"
+            android:textStyle="bold"/>
+
     </group>
 
 </menu>
