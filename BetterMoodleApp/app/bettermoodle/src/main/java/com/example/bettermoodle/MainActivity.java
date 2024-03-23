@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -27,6 +28,10 @@ public class MainActivity extends AppCompatActivity {
 
     ProgressBar progressBar;
 
+    public void showToast(final String toast)
+    {
+        runOnUiThread(() -> Toast.makeText(this, toast, Toast.LENGTH_SHORT).show());
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -39,11 +44,16 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
             String user = userid.getText().toString(), pass = password.getText().toString();
             BasicAuthInterceptor interceptor = new BasicAuthInterceptor(user, pass);
+            // net in here slow as balls so we gotta up the timeout seconds
             client = new OkHttpClient.Builder()
                     .addInterceptor(interceptor)
-                    .build();
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+            ;
             Request request = new Request.Builder()
-                    .url("http://192.168.1.14:5000/moodle/notifications")
+                    .url("http://192.168.1.16:5000/moodle/notifications")
                     .build();
 
 
@@ -65,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
                             startActivity(intent);
                         }
                         else {
-                            Toast.makeText(this,"Invalid Credentials!", Toast.LENGTH_SHORT).show();
+                              this.showToast("Invalid Credentials!");
                         }
                     });
                 return response;
@@ -74,8 +84,13 @@ public class MainActivity extends AppCompatActivity {
             new Thread(() -> {
                 try {
                     responseFuture.get();
-                } catch (ExecutionException | InterruptedException e) {
+                } catch (InterruptedException e) {
                     throw new RuntimeException(e);
+                } catch (ExecutionException e) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this,"Failed to connect to moodle API!", Toast.LENGTH_SHORT).show();
+                        progressBar.setVisibility(View.GONE);
+                    });
                 }
             }).start();
         });
