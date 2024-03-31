@@ -72,16 +72,17 @@ class APITest(unittest.TestCase):
             )
 
     def test_with_cache(self):
-        with open("./reference/most_recent.json") as f:
-            request_json = json.load(f)
-            responses = self.all_tests("POST", request_json=request_json)
-            for response in responses:
-                response_json = response.json()
-                assert response.status_code == HTTPStatus.OK
-                assert all(
-                    response_json[feature]
-                    for feature in ["sesskey", "userid", "cookies"]
-                )
+        request_json = self.client.get(
+            self.url + "moodle/notifications",
+            headers={"Content-Type": "application/json"},
+        ).json()
+        responses = self.all_tests("POST", request_json=request_json)
+        for response in responses:
+            response_json = response.json()
+            assert response.status_code == HTTPStatus.OK
+            assert all(
+                response_json[feature] for feature in ["sesskey", "userid", "cookies"]
+            )
 
 
 if __name__ == "__main__":

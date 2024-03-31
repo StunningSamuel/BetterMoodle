@@ -16,7 +16,7 @@ LOGIN_URL = r"https://icas.bau.edu.lb:8443/cas/login?service=https%3A%2F%2Fmoodl
 SECURE_URL = r"https://moodle.bau.edu.lb/my/"
 SERIVCE_URL = r"https://moodle.bau.edu.lb/lib/ajax/service.php"
 cookie_jar = dict()
-ua = UserAgent(browsers=["chrome", "firefox"], os=["windows", "macos"])
+ua = UserAgent(browsers=["chrome", "firefox"], os=["windows"])
 
 
 ### Utilities
@@ -314,13 +314,22 @@ def get_schedule(
     # uncomment this for testing
     # response = open("./scratch.html").read()
     json_response = []
-    soop = soup_bowl(response)
-    course_items = list(i.contents for i in soop.select(".ddlabel > a"))
+    soop = soup_bowl(response.text)
+    course_items = list(i for i in soop.select(".ddlabel > a"))
+    weekday_row = soop.select_one(".datadisplaytable > tbody > tr")
+    assert weekday_row
+    weekday_row = weekday_row.select("th")
     for course in course_items:
-        subject_key = course[0].split("-")[0]  # type:ignore
-        crn = course[2].split()[0]  # type:ignore
-        time = course[4]  # type: ignore
-        location = course[6]
+        parent_td = course.parent
+        assert parent_td
+        parent_tr = parent_td.parent
+        assert parent_tr
+        day = weekday_row[parent_tr.select(".ddlabel").index(parent_td)].text.strip()
+        contents = course.contents
+        subject_key = contents[0].split("-")[0]  # type:ignore
+        crn = contents[2].split()[0]  # type:ignore
+        time = contents[4]  # type: ignore
+        location = contents[6]
         if not time:
             raise Exception("Couldn't find time for course!")
         subject = mappings[re.sub(r"\s", "", subject_key)]
@@ -330,6 +339,7 @@ def get_schedule(
                 "CRN number": crn,
                 "subject": subject,
                 "time": time,
+                "day": day,
                 "location": location,
             }
         )
