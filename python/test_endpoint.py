@@ -1,15 +1,20 @@
 from http import HTTPStatus
 import json
+import os
 import unittest
-
+from dotenv import load_dotenv
 from httpx import Client, BasicAuth
+
+load_dotenv()
 
 
 class APITest(unittest.TestCase):
 
     def setUp(self) -> None:
-        with open("./bot_data_stuff/creds.txt") as f:
-            self.username, self.password = f.read().splitlines()[:2]
+        username, password = os.environ.get("USERNAME"), os.environ.get("PASSWORD")
+        if not username or not password:
+            raise Exception("Cannot find username or password!")
+        self.username, self.password = username, password
         self.client = Client(
             follow_redirects=True,
             timeout=None,
