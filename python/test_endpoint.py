@@ -5,8 +5,6 @@ import unittest
 from dotenv import load_dotenv
 from httpx import Client, BasicAuth
 
-load_dotenv()
-
 
 class APITest(unittest.TestCase):
 
@@ -91,4 +89,5 @@ class APITest(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    load_dotenv()
     unittest.main()
