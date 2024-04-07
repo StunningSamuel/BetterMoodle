@@ -28,6 +28,10 @@ public class MainActivity extends AppCompatActivity {
 
     ProgressBar progressBar;
 
+    public void logStackTrace(String Tag,Exception e) {
+        Log.e(Tag, String.valueOf(e.getCause()));
+    }
+
     public void showToast(final String toast)
     {
         runOnUiThread(() -> Toast.makeText(this, toast, Toast.LENGTH_SHORT).show());
@@ -53,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
                     .build()
             ;
             Request request = new Request.Builder()
-                    .url("http://192.168.1.16:5000/moodle/notifications")
+                    .url("http://192.168.1.19:5000/moodle/notifications")
                     .build();
 
 
@@ -89,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 } catch (ExecutionException e) {
                     runOnUiThread(() -> {
                         Toast.makeText(MainActivity.this,"Failed to connect to moodle API!", Toast.LENGTH_SHORT).show();
+                        logStackTrace("HTTP Tag", e);
                         progressBar.setVisibility(View.GONE);
                     });
                 }
