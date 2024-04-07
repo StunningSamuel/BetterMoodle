@@ -24,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
     OkHttpClient client;
     EditText userid;
     EditText password;
+    EditText ipaddress;
     Button loginbutton;
 
     ProgressBar progressBar;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar);
         userid = findViewById(R.id.userid);
         password = findViewById(R.id.password);
+        ipaddress = findViewById(R.id.userip);
         loginbutton = findViewById(R.id.loginbutton);
         loginbutton.setOnClickListener(view -> {
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);

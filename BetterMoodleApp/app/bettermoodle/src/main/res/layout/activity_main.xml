@@ -12,6 +12,8 @@
     android:orientation="horizontal">
 
 
+
+
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -19,7 +21,6 @@
         android:backgroundTint="@color/white"
         android:background="@drawable/loginwrapper"
         app:cardElevation="30dp">
-
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -65,6 +66,20 @@
                 android:fontFamily="@font/comfortaacegular"
                 android:hint="Password"
                 android:inputType="textPassword"
+                android:padding="15dp"
+                android:textColor="@color/black"
+                android:textColorHighlight="@color/black" />
+
+            <EditText
+                android:id="@+id/userip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/loginwrapper"
+                android:drawableLeft="@drawable/baseline_admin_panel_settings_24"
+                android:drawablePadding="2dp"
+                android:fontFamily="@font/comfortaacegular"
+                android:hint="IP Address"
                 android:padding="15dp"
                 android:textColor="@color/black"
                 android:textColorHighlight="@color/black" />
