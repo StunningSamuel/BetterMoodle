@@ -21,6 +21,7 @@ import com.google.android.material.navigation.NavigationView;
 public class OptionPage2 extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerLayout;
     Intent intent = new Intent(OptionPage2.this, MainActivity.class);
+    Intent intent2 = new Intent(OptionPage2.this, NotificationActivity.class);
 
 
 
@@ -54,7 +55,7 @@ public class OptionPage2 extends AppCompatActivity implements NavigationView.OnN
         } else if (item.getItemId() == R.id.nav_schedule) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new ScheduleFragment()).commit();
         } else if (item.getItemId() == R.id.nav_notify) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new NotificationsFragment()).commit();
+            startActivity(intent2);
         } else if (item.getItemId() == R.id.reg_button) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new RegisterFragment()).commit();
         } else if (item.getItemId() == R.id.settingsbutton) {
