@@ -5,15 +5,13 @@ from flask import Flask, Response, abort, request
 import httpx
 from functools import wraps
 from dotenv import load_dotenv
-import asyncio
 from endpoint import (
     get_mappings,
-    get_schedule,
     moodle_api,
     return_error_json,
     serialize_session_cookies,
 )
-from registration import register_courses
+from registration import register_courses, schedule
 
 app = Flask(__name__)
 load_dotenv()
@@ -66,6 +64,15 @@ def home():
     return "-------------------------Welcome to Better Moodle--------------------"
 
 
+@app.before_request
+def add_cookies():
+    if request.content_type == "application/json":
+        # we got cookies from the user, add them to the session object
+        assert request.json != None, "Json is empty!"
+        for cookie in request.json["cookies"]:
+            Session.cookies.set(**cookie)
+
+
 @app.after_request
 def add_metadata(response: Response):
 
@@ -93,7 +100,7 @@ def add_metadata(response: Response):
 @app.route("/schedule", methods=["GET", "POST"])
 def get_schedule_endpoint():
     username, password = get_creds()
-    return get_schedule(Session, username, password)
+    return schedule(Session, username, password)
 
 
 @app.route("/mappings", methods=["GET", "POST"])
@@ -107,11 +114,6 @@ def get_mappings_endpoint():
 def moodle_route_variable(endpoint: str):
     username, password = get_creds()
     try:
-        if request.content_type == "application/json":
-            # we got cookies from the user, add them to the session object
-            assert request.json != None, "Json is empty!"
-            for cookie in request.json["cookies"]:
-                Session.cookies.set(**cookie)
         return moodle_api(Session, username, password, endpoint)
 
     except AssertionError:
@@ -127,7 +129,7 @@ def moodle_route_variable(endpoint: str):
 def register():
     username, password = get_creds()
     courses = request.form["courses"]
-    registration_page = asyncio.run(register_courses(courses, username, password))
+    registration_page = register_courses(Session, courses, username, password)
     return registration_page, 200
 
 

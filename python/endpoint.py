@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 import html
 import http
 import json
@@ -17,6 +17,7 @@ SECURE_URL = r"https://moodle.bau.edu.lb/my/"
 SERIVCE_URL = r"https://moodle.bau.edu.lb/lib/ajax/service.php"
 cookie_jar = dict()
 ua = UserAgent(browsers=["chrome", "firefox"], os=["windows"])
+now = datetime.now()
 
 
 ### Utilities
@@ -316,7 +317,7 @@ def get_schedule(
     json_response = []
     soop = soup_bowl(response.text)
     course_items = list(i for i in soop.select(".ddlabel > a"))
-    weekday_row = soop.select_one(".datadisplaytable > tbody > tr")
+    weekday_row = soop.select_one(".datadisplaytable > tr")
     assert weekday_row
     weekday_row = weekday_row.select("th")
     for course in course_items:
@@ -362,7 +363,6 @@ def moodle_api(
     @param dict_to_modify : the dictionary to mutate in order to propagate the sesskey up the call chain. That is, if a function calls this function it will modify the top function's response.
 
     """
-    now = datetime.now()
     endpoint_info = {
         "calendar": {
             "method_name": "core_calendar_get_calendar_monthly_view",
@@ -430,7 +430,12 @@ def moodle_api(
         )
         # at the end of every request, return the current cookies
         response_json: dict = api_response.json()[0]
-        response_json.update(sesskey=sesskey, userid=userid)
+        response_json.update(
+            sesskey=sesskey,
+            userid=userid,
+            timestamp=now.timestamp(),
+            expires=now + timedelta(hours=8),
+        )
         return response_json
 
     moodle_html = ""
@@ -444,6 +449,14 @@ def moodle_api(
     if request.content_type == "application/json":
         creds_json = request.json
         assert creds_json
+        if now.timestamp() >= float(creds_json["expires"]):
+            # session key lasts 8 hours, quickly invalidate in order to not to check with Iconnect servers
+            return abort(
+                return_error_json(
+                    http.HTTPStatus.BAD_REQUEST,
+                    "Provided credentials are wrong or server overloaded, please try again with correct ones.",
+                )
+            )
         session_key = creds_json["sesskey"]
         userid = creds_json["userid"]
         return make_final_request(session_key, userid)
@@ -480,6 +493,9 @@ def moodle_api(
     final_json = make_final_request(sesskey, userid)
     if dict_to_modify != None:
         dict_to_modify.update(
-            sesskey=final_json["sesskey"], userid=final_json["userid"]
+            sesskey=final_json["sesskey"],
+            userid=final_json["userid"],
+            timestamp=now.timestamp(),
+            expires=now + timedelta(hours=8),
         )
     return final_json

@@ -46,16 +46,19 @@ class APITest(unittest.TestCase):
         return responses
 
     def test_wrong_creds(self):
-        no_auth_client = Client()
+        no_auth_client = Client(timeout=None)
         # test without basic auth, any endpoint is fine
         response = no_auth_client.get(self.url + "moodle/notifications")
         assert response.status_code == HTTPStatus.UNAUTHORIZED
         # test with wrong creds (username is incorrect)
-        no_auth_client = Client(auth=BasicAuth(self.username + "dwqdq", self.password))
+        no_auth_client.auth = auth = BasicAuth(self.username + "dwqdq", self.password)
         response = no_auth_client.get(self.url + "moodle/notifications")
         assert response.status_code == HTTPStatus.BAD_REQUEST
         # test with wrong creds (username is correct but password isn't)
-        no_auth_client = Client(auth=BasicAuth(self.username, "fqwfqfwqf"))
+        # no_auth_client = Client(
+        #     auth=BasicAuth(self.username, "fqwfqfwqf"), timeout=None
+        # )
+        no_auth_client.auth = BasicAuth(self.username, "fqwfqfwqf")
         response = no_auth_client.get(self.url + "moodle/notifications")
         assert response.status_code == HTTPStatus.BAD_REQUEST
         # test with correct creds but malformed input json
@@ -64,6 +67,7 @@ class APITest(unittest.TestCase):
             headers={"Content-Type": "application/json"},
         )
         assert response.status_code == HTTPStatus.BAD_REQUEST
+        no_auth_client.close()
 
     def test_without_cache(self):
         responses = self.all_tests("GET")
@@ -75,10 +79,12 @@ class APITest(unittest.TestCase):
             )
 
     def test_with_cache(self):
-        request_json = self.client.get(
+        first_request = self.client.get(
             self.url + "moodle/notifications",
             headers={"Content-Type": "application/json"},
-        ).json()
+        )
+        first_request.raise_for_status()
+        request_json = first_request.json()
         responses = self.all_tests("POST", request_json=request_json)
         for response in responses:
             response_json = response.json()
