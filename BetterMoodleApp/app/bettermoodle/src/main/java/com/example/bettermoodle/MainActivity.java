@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                     .build()
             ;
             Request request = new Request.Builder()
-                    .url("http://192.168.1.19:5000/moodle/notifications")
+                    .url(String.format("http://%s:5000/moodle/notifications", ipaddress.getText().toString()))
                     .build();
 
 
