@@ -1,7 +1,8 @@
+import asyncio
 from datetime import datetime
 import itertools
 import re
-from bs4 import Tag
+from typing import Any
 from flask import request
 import httpx
 from endpoint import soup_bowl, css_selector
@@ -16,7 +17,7 @@ def batched(iterable, n: int):
         yield batch
 
 
-def get_tag_text(tag: Tag):
+def get_tag_text(tag):
     return tag.get_text(strip=True)
 
 
@@ -51,31 +52,23 @@ def registration_main_menu(Session: httpx.Client, username: str, password: str):
         "service": "http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=twbkwbis.P_GenMenu?name=bmenu.P_RegMnu"
     }
 
-    cookies: list | None = None
-    if request.json:
-        cookies = request.json["cookies"]
+    login_page = Session.get(url, headers=headers, params=querystring)
 
-    if not cookies:
-        login_page = Session.get(url, headers=headers, params=querystring)
+    execution = css_selector(login_page.text, "[name=execution]", "value")
 
-        execution = css_selector(login_page.text, "[name=execution]", "value")
-
-        Session.request(
-            "POST",
-            url,
-            data={
-                "username": username,
-                "password": password,
-                "execution": execution,
-                "_eventId": "submit",
-                "geolocation": "",
-            },
-            headers=headers,
-            params=querystring,
-        )
-
-    else:
-        Session.get(querystring["service"], headers=headers)
+    Session.request(
+        "POST",
+        url,
+        data={
+            "username": username,
+            "password": password,
+            "execution": execution,
+            "_eventId": "submit",
+            "geolocation": "",
+        },
+        headers=headers,
+        params=querystring,
+    )
 
     terms = Session.get(
         "http://ban-prod-ssb2.bau.edu.lb:7750/PROD/bwskflib.P_SelDefTerm",
@@ -83,7 +76,7 @@ def registration_main_menu(Session: httpx.Client, username: str, password: str):
     )
     most_recent_term = css_selector(terms.text, "#term_id > option", "value")
     # Tell the server we have chosen this term
-    response = Session.post(
+    Session.post(
         "http://ban-prod-ssb2.bau.edu.lb:7750/PROD/bwcklibs.P_StoreTerm",
         headers=headers,
         data={"name_var": "bmenu.P_RegMnu", "term_in": most_recent_term},
@@ -108,10 +101,10 @@ def schedule(Session: httpx.Client, username: str, password: str):
         "R": [],
     }
 
-    def get_instructors(elem: Tag | str) -> str:
+    def get_instructors(elem: Any | str) -> str:
 
-        if type(elem) == Tag:
-            href: str = elem.attrs["href"]
+        if type(elem) != str:
+            href: str = elem.attrs["href"]  # type: ignore
             return href
         else:
             return elem  # type: ignore

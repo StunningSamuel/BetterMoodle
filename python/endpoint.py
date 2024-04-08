@@ -65,8 +65,9 @@ def get_user_info(moodle_html: str):
 
 def serialize_session_cookies(dict_to_modify: dict, Session: httpx.Client):
     cookie_jar = Session.cookies.jar
+    temp_dict = dict(**dict_to_modify)
 
-    dict_to_modify["cookies"] = [
+    temp_dict["cookies"] = [
         {
             "name": cookie.name,
             "value": cookie.value,
@@ -76,119 +77,7 @@ def serialize_session_cookies(dict_to_modify: dict, Session: httpx.Client):
         for cookie in cookie_jar
     ]
 
-
-class Notifications:
-    POSSIBLE_KEYWORDS = ["exam", "homework", "lecture"]
-
-    @dataclass
-    class Notification:
-        source_obj: dict
-
-        @property
-        def subject(self):
-            subject_code = self.source_obj["fullmessage"].split("-")[0]
-            return subject_code
-
-        @property
-        def time_created(self) -> datetime:
-            return datetime.fromtimestamp(self.source_obj["timecreated"])
-
-        @property
-        def message(self) -> str:
-            return (
-                self.source_obj["fullmessage"]
-                .strip("\n")
-                .split(
-                    "---------------------------------------------------------------------"
-                )[1]
-                .lower()
-            )
-
-        @property
-        def title(self) -> str:
-            return self.source_obj["subject"]
-
-        @property
-        def keywords(self):
-            types = (
-                dict.fromkeys(
-                    ("quiz", "test", "exam", "exams", "midterm", "final"), "exam"
-                )
-                | dict.fromkeys(("homework", "assignment", "hw", "solve"), "homework")
-                | dict.fromkeys(("grade", "mark"), "grades")
-                | dict.fromkeys(("lecture", "location", "session"), "lecture")
-            )
-            keywords_set = set()
-            whole_words_regex = re.compile("|".join(keyword for keyword in types))
-            # search title as well because there might be missing keywords
-            for result in whole_words_regex.findall(self.title + "\n\n" + self.message):
-                keywords_set.add(types[result])
-
-            return keywords_set
-
-        @property
-        def deadline(self):
-            return
-
-        def set_mappings(self, mappings: dict[str, str]):
-            self.mappings = mappings
-
-        def __str__(self) -> str:
-            """
-            Builds a string incrementally from object until it reaches a breakpoint (a field is missing)
-            """
-
-            def built_strings():
-                attributes = [
-                    name
-                    for name in dir(self)
-                    if not name.startswith("_") and name != "source_obj"
-                ][::-1]
-
-                for attribute in attributes:
-                    if getattr(self, attribute):
-                        yield f"{attribute} : {getattr(self,attribute)}"
-
-            padding = "=" * 30
-            return "\n".join(filter(None, built_strings())) + "\n" + padding + "\n"
-
-    def __init__(
-        self, json_objects: str, mappings: dict[str, str] | None = None
-    ) -> None:
-        self.notifications = [
-            self.Notification(obj)
-            for obj in json.loads(json_objects)["data"]["notifications"]
-        ]
-        if mappings:
-            for notification in self.notifications:
-                notification.set_mappings(mappings)
-
-    def search(self, query: str):
-
-        return list(
-            notification
-            for notification in self.notifications
-            if (notification.title + "\n\n" + notification.message).find(query) != -1
-        )
-
-    def filter_notifications(self, func: Callable[[Notification], bool]):
-
-        return list(filter(func, self.notifications))
-
-    def get_important(self):
-        return self.filter_notifications(lambda n: bool(n.keywords))
-
-    def get_keywords(self, keywords: list[str]):
-        return self.filter_notifications(
-            lambda notification: any(
-                keyword in keywords for keyword in notification.keywords
-            )
-        )
-
-    @staticmethod
-    def pretty_print(notifications: list[Notification]):
-        for notification in notifications:
-            print(notification)
+    return temp_dict
 
 
 ### End utilities
@@ -274,93 +163,16 @@ def login_moodle(Session: httpx.Client, username: str, password: str):
     )
 
 
-def get_mappings(Session: httpx.Client, username: str, password: str):
-    mappings = {}
-    courses = moodle_api(Session, username, password, "courses", mappings)
-    # we can't catch it in the after request processor because we're using this as an internal function
-    if courses["error"] == True:
-        return abort(
-            return_error_json(http.HTTPStatus.BAD_REQUEST, "Sesskey is logged out!")
-        )
-
-    # assuming sesskey not expired, continue
-    mappings.update(
-        {
-            item["shortname"].split("-")[0]: " ".join(
-                word
-                for word in re.sub(r"[^a-zA-Z\s]", " ", html.unescape(item["fullname"]))
-                .strip()
-                .split()
-                if not word.isspace()
-            )
-            for item in courses["data"]["courses"]
-        }
-    )
-    return mappings
-
-
-def get_schedule(
-    Session: httpx.Client,
-    username: str,
-    password: str,
-):
-    # get cookies from moodle on dry run because it is faster
-    mappings = get_mappings(Session, username, password)
-    url = "https://icas.bau.edu.lb:8443/cas/login"
-    params = {
-        "service": "http://ban-prod-ssb2.bau.edu.lb:8010/ssomanager/c/SSB?pkg=bwskfshd.P_CrseSchd"
-    }
-    response = Session.get(url, params=params, headers=login_headers)
-    # we want to parse the html from it
-    # uncomment this for testing
-    # response = open("./scratch.html").read()
-    json_response = []
-    soop = soup_bowl(response.text)
-    course_items = list(i for i in soop.select(".ddlabel > a"))
-    weekday_row = soop.select_one(".datadisplaytable > tr")
-    assert weekday_row
-    weekday_row = weekday_row.select("th")
-    for course in course_items:
-        parent_td = course.parent
-        assert parent_td
-        parent_tr = parent_td.parent
-        assert parent_tr
-        day = weekday_row[parent_tr.select(".ddlabel").index(parent_td)].text.strip()
-        contents = course.contents
-        subject_key = contents[0].split("-")[0]  # type:ignore
-        crn = contents[2].split()[0]  # type:ignore
-        time = contents[4]  # type: ignore
-        location = contents[6]
-        if not time:
-            raise Exception("Couldn't find time for course!")
-        subject = mappings[re.sub(r"\s", "", subject_key)]
-        # subject = re.sub(r"\s", "", subject_key)
-        json_response.append(
-            {
-                "CRN number": crn,
-                "subject": subject,
-                "time": time,
-                "day": day,
-                "location": location,
-            }
-        )
-
-    mappings.update({"Courses": json_response})
-    return mappings
-
-
 def moodle_api(
     Session: httpx.Client,
     username: str,
     password: str,
     endpoint: str,
-    dict_to_modify: dict | None = None,
 ):
     """
     @param Session : the server's global session.
     @param username: the username from basic auth.
     @param password: the password from basic auth.
-    @param dict_to_modify : the dictionary to mutate in order to propagate the sesskey up the call chain. That is, if a function calls this function it will modify the top function's response.
 
     """
     endpoint_info = {
@@ -430,11 +242,12 @@ def moodle_api(
         )
         # at the end of every request, return the current cookies
         response_json: dict = api_response.json()[0]
+        expires_in = now + timedelta(hours=8)
         response_json.update(
             sesskey=sesskey,
             userid=userid,
             timestamp=now.timestamp(),
-            expires=now + timedelta(hours=8),
+            expires=expires_in.timestamp(),
         )
         return response_json
 
@@ -453,8 +266,8 @@ def moodle_api(
             # session key lasts 8 hours, quickly invalidate in order to not to check with Iconnect servers
             return abort(
                 return_error_json(
-                    http.HTTPStatus.BAD_REQUEST,
-                    "Provided credentials are wrong or server overloaded, please try again with correct ones.",
+                    http.HTTPStatus.UNAUTHORIZED,
+                    "Moodle session key expired! Please login again or refresh the session key.",
                 )
             )
         session_key = creds_json["sesskey"]
@@ -485,17 +298,10 @@ def moodle_api(
     except AttributeError:
         return abort(
             return_error_json(
-                http.HTTPStatus.BAD_REQUEST,
+                http.HTTPStatus.UNAUTHORIZED,
                 "Provided credentials are wrong or server overloaded, please try again with correct ones.",
             )
         )
 
     final_json = make_final_request(sesskey, userid)
-    if dict_to_modify != None:
-        dict_to_modify.update(
-            sesskey=final_json["sesskey"],
-            userid=final_json["userid"],
-            timestamp=now.timestamp(),
-            expires=now + timedelta(hours=8),
-        )
     return final_json

@@ -53,3 +53,4 @@ app.*.map.json
 *stuff/creds.txt
 python/bot_data_stuff/
 python/scratch.py
+python/flask_session

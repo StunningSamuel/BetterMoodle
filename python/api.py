@@ -6,7 +6,6 @@ import httpx
 from functools import wraps
 from dotenv import load_dotenv
 from endpoint import (
-    get_mappings,
     moodle_api,
     return_error_json,
     serialize_session_cookies,
@@ -16,7 +15,16 @@ from registration import register_courses, schedule
 app = Flask(__name__)
 load_dotenv()
 app.secret_key = os.environ.get("SECRET_KEY")
-Session = httpx.Client(timeout=None, follow_redirects=True)
+
+
+def add_cookies(Session: httpx.Client):
+    if request.content_type == "application/json":
+        # we got cookies from the user, add them to the session object
+        assert request.json != None, "Json is empty!"
+        for cookie in request.json["cookies"]:
+            Session.cookies.set(**cookie)
+
+    return Session
 
 
 def requires_basic_auth(func):
@@ -61,16 +69,8 @@ def get_creds():
 
 @app.route("/")
 def home():
-    return "-------------------------Welcome to Better Moodle--------------------"
-
-
-@app.before_request
-def add_cookies():
-    if request.content_type == "application/json":
-        # we got cookies from the user, add them to the session object
-        assert request.json != None, "Json is empty!"
-        for cookie in request.json["cookies"]:
-            Session.cookies.set(**cookie)
+    # session.setdefault("session", httpx.Client(timeout=None, follow_redirects=True))
+    return "-------------------------Welcome to Better Moodle--------------------", 200
 
 
 @app.after_request
@@ -83,13 +83,6 @@ def add_metadata(response: Response):
                 http.HTTPStatus.BAD_REQUEST, "Invalid or expired sesskey!"
             )
 
-        # after every request, we simply add the session cookies and a time stamp
-        # If the endpoint wants to add more metadata it can do so.
-        serialize_session_cookies(
-            response_json,
-            Session,
-        )
-        response.set_data(json.dumps(response_json).encode())
         return response
 
     except json.decoder.JSONDecodeError:
@@ -99,38 +92,39 @@ def add_metadata(response: Response):
 
 @app.route("/schedule", methods=["GET", "POST"])
 def get_schedule_endpoint():
-    username, password = get_creds()
-    return schedule(Session, username, password)
-
-
-@app.route("/mappings", methods=["GET", "POST"])
-def get_mappings_endpoint():
-    username, password = get_creds()
-    return get_mappings(Session, username, password)
+    with httpx.Client(timeout=None, follow_redirects=True) as Session:
+        Session = add_cookies(Session)
+        username, password = get_creds()
+        return serialize_session_cookies(schedule(Session, username, password), Session)
 
 
 @app.route("/moodle/<endpoint>", methods=["GET", "POST"])
 @requires_basic_auth
 def moodle_route_variable(endpoint: str):
     username, password = get_creds()
-    try:
-        return moodle_api(Session, username, password, endpoint)
+    with httpx.Client(timeout=None, follow_redirects=True) as Session:
+        Session = add_cookies(Session)
+        try:
+            response_json = moodle_api(Session, username, password, endpoint)
+            return serialize_session_cookies(response_json, Session)
 
-    except AssertionError:
-        abort(
-            return_error_json(
-                http.HTTPStatus.BAD_REQUEST, "Moodle has no such endpoint!"
+        except AssertionError:
+            abort(
+                return_error_json(
+                    http.HTTPStatus.BAD_REQUEST, "Moodle has no such endpoint!"
+                )
             )
-        )
 
 
 @app.route("/register", methods=["POST"])
 @requires_basic_auth
 def register():
-    username, password = get_creds()
-    courses = request.form["courses"]
-    registration_page = register_courses(Session, courses, username, password)
-    return registration_page, 200
+    with httpx.Client(timeout=None, follow_redirects=True) as Session:
+        Session = add_cookies(Session)
+        username, password = get_creds()
+        courses = request.form["courses"]
+        registration_page = register_courses(Session, courses, username, password)
+        return registration_page, 200
 
 
 if __name__ == "__main__":
