@@ -1,3 +1,5 @@
+import org.apache.tools.ant.util.JavaEnvUtils.VERSION_1_8
+
 plugins {
     id("com.android.application")
 }
@@ -22,15 +24,11 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
 }
 
 dependencies {
-
-    implementation (" com.google.code.gson:gson:2.8.6 ") // or earlier versions
+    implementation("androidx.security:security-crypto:1.0.0")
+    implementation ("com.google.code.gson:gson:2.10.1") // or earlier versions
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

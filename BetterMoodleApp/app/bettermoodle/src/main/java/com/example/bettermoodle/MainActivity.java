@@ -10,8 +10,11 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKeys;
 
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +40,36 @@ public class MainActivity extends AppCompatActivity {
     {
         runOnUiThread(() -> Toast.makeText(this, toast, Toast.LENGTH_SHORT).show());
     }
+
+    public EncryptedSharedPreferences getPrefs() {
+        String masterKeyAlias = null;
+        try {
+            masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
+        } catch (Exception e) {
+            logStackTrace("Security Tag",e);
+        }
+
+        // Initialize/open an instance of
+        // EncryptedSharedPreferences on below line.
+            // on below line initializing our encrypted
+            // shared preferences and passing our key to it.
+            assert masterKeyAlias != null;
+        EncryptedSharedPreferences sharedPreferences = null;
+        try {
+            sharedPreferences = (EncryptedSharedPreferences) EncryptedSharedPreferences.create(
+                    // passing a file name to share a preferences
+                    "preferences",
+                    masterKeyAlias,
+                    getApplicationContext(),
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+        } catch (GeneralSecurityException | IOException e) {
+            logStackTrace("Security Tag", e);
+        }
+        return sharedPreferences;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,7 +79,30 @@ public class MainActivity extends AppCompatActivity {
         password = findViewById(R.id.password);
         ipaddress = findViewById(R.id.userip);
         loginbutton = findViewById(R.id.loginbutton);
+        EncryptedSharedPreferences prefs = getPrefs();
+        String[] keys = { "username","password","ip" };
+        EditText[] texts = {userid,password,ipaddress};
+        boolean hasCredentials = true;
+        for (String key:keys) {
+            boolean contains = prefs.contains(key);
+            if(!contains) {hasCredentials = false;}
+        }
+        if (hasCredentials){
+            // we already have credentials, replace text with the values
+            for (int i = 0; i < 3; i++) {
+                String value = prefs.getString(keys[i], "");
+                texts[i].setText(value);
+            }
+        }
+
+        boolean finalHasCredentials = hasCredentials;
         loginbutton.setOnClickListener(view -> {
+            // store information for future logins
+            if (!finalHasCredentials) {
+                for (int i = 0; i < 3; i++) {
+                    prefs.edit().putString(keys[i], texts[i].getText().toString()).apply();
+                }
+            }
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
             String user = userid.getText().toString(), pass = password.getText().toString();
             BasicAuthInterceptor interceptor = new BasicAuthInterceptor(user, pass);
