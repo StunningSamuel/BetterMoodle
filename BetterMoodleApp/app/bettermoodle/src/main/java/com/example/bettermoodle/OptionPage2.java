@@ -20,8 +20,11 @@ import com.google.android.material.navigation.NavigationView;
 
 public class OptionPage2 extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerLayout;
-    Intent intent = new Intent(OptionPage2.this, MainActivity.class);
+    Intent intent1 = new Intent(OptionPage2.this, MainActivity.class);
     Intent intent2 = new Intent(OptionPage2.this, NotificationActivity.class);
+    Intent intent3 = new Intent(OptionPage2.this, RegistrationClass.class);
+
+
 
 
 
@@ -57,11 +60,11 @@ public class OptionPage2 extends AppCompatActivity implements NavigationView.OnN
         } else if (item.getItemId() == R.id.nav_notify) {
             startActivity(intent2);
         } else if (item.getItemId() == R.id.reg_button) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new RegisterFragment()).commit();
+            startActivity(intent3);
         } else if (item.getItemId() == R.id.settingsbutton) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new SettingsFragment()).commit();
         } else if(item.getItemId() == R.id.logoutbutton)
-            startActivity(intent);
+            startActivity(intent1);
 
         drawerLayout.closeDrawer(GravityCompat.START);
         return true;
