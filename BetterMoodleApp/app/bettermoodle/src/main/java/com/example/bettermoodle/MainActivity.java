@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKeys;
@@ -32,12 +33,11 @@ public class MainActivity extends AppCompatActivity {
 
     ProgressBar progressBar;
 
-    public void logStackTrace(String Tag,Exception e) {
+    public void logStackTrace(String Tag, @NonNull Exception e) {
         Log.e(Tag, String.valueOf(e.getCause()));
     }
 
-    public void showToast(final String toast)
-    {
+    public void showToast(final String toast) {
         runOnUiThread(() -> Toast.makeText(this, toast, Toast.LENGTH_SHORT).show());
     }
 
@@ -46,14 +46,14 @@ public class MainActivity extends AppCompatActivity {
         try {
             masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
         } catch (Exception e) {
-            logStackTrace("Security Tag",e);
+            logStackTrace("Security Tag", e);
         }
 
         // Initialize/open an instance of
         // EncryptedSharedPreferences on below line.
-            // on below line initializing our encrypted
-            // shared preferences and passing our key to it.
-            assert masterKeyAlias != null;
+        // on below line initializing our encrypted
+        // shared preferences and passing our key to it.
+        assert masterKeyAlias != null;
         EncryptedSharedPreferences sharedPreferences = null;
         try {
             sharedPreferences = (EncryptedSharedPreferences) EncryptedSharedPreferences.create(
@@ -80,14 +80,16 @@ public class MainActivity extends AppCompatActivity {
         ipaddress = findViewById(R.id.userip);
         loginbutton = findViewById(R.id.loginbutton);
         EncryptedSharedPreferences prefs = getPrefs();
-        String[] keys = { "username","password","ip" };
-        EditText[] texts = {userid,password,ipaddress};
+        String[] keys = {"username", "password", "ip"};
+        EditText[] texts = {userid, password, ipaddress};
         boolean hasCredentials = true;
-        for (String key:keys) {
+        for (String key : keys) {
             boolean contains = prefs.contains(key);
-            if(!contains) {hasCredentials = false;}
+            if (!contains) {
+                hasCredentials = false;
+            }
         }
-        if (hasCredentials){
+        if (hasCredentials) {
             // we already have credentials, replace text with the values
             for (int i = 0; i < 3; i++) {
                 String value = prefs.getString(keys[i], "");
@@ -130,16 +132,15 @@ public class MainActivity extends AppCompatActivity {
                     throw new RuntimeException(e);
                 }
             }).thenApplyAsync(response -> {
-                    // once the request is done, remove loading spinner
-                    runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        if (response.isSuccessful()) {
-                            startActivity(intent);
-                        }
-                        else {
-                              this.showToast("Invalid Credentials!");
-                        }
-                    });
+                // once the request is done, remove loading spinner
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    if (response.isSuccessful()) {
+                        startActivity(intent);
+                    } else {
+                        this.showToast("Invalid Credentials!");
+                    }
+                });
                 return response;
             });
 
@@ -150,16 +151,13 @@ public class MainActivity extends AppCompatActivity {
                     throw new RuntimeException(e);
                 } catch (ExecutionException e) {
                     runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this,"Failed to connect to moodle API!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Failed to connect to moodle API!", Toast.LENGTH_SHORT).show();
                         logStackTrace("HTTP Tag", e);
                         progressBar.setVisibility(View.GONE);
                     });
                 }
             }).start();
         });
-
-
-
 
 
     }

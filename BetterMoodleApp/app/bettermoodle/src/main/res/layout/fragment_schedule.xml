@@ -3,12 +3,25 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".ScheduleFragment">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
+    <com.alamkanak.weekview.WeekView
+        android:id="@+id/weekView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="Schedule Page" />
+        app:defaultEventColor="@color/colorprimary"
+        app:eventTextColor="@color/white"
+        app:timeColumnTextSize="12sp"
+        app:hourHeight="60dp"
+        app:timeColumnPadding="8dp"
+        app:timeColumnTextColor="@color/light_blue"
+        app:timeColumnBackgroundColor="@color/white"
+        app:headerPadding="12dp"
+        app:columnGap="8dp"
+        app:numberOfVisibleDays="3"
+        app:headerBackgroundColor="@color/white"
+        app:dayBackgroundColor="@color/white"
+        app:todayBackgroundColor="@color/white" />
 
 </FrameLayout>
