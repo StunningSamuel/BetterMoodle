@@ -18,10 +18,8 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
@@ -107,46 +105,22 @@ public class MainActivity extends AppCompatActivity {
             }
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
             String user = userid.getText().toString(), pass = password.getText().toString();
-            BasicAuthInterceptor interceptor = new BasicAuthInterceptor(user, pass);
-            // net in here slow as balls so we gotta up the timeout seconds
-            client = new OkHttpClient.Builder()
-                    .addInterceptor(interceptor)
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .build()
-            ;
-            Request request = new Request.Builder()
-                    .url(String.format("http://%s:5000/", ipaddress.getText().toString()))
-                    .build();
-
-
+            String url = String.format("http://%s:5000/", ipaddress.getText().toString());
+            JsonInterface jsonInterface = new JsonInterface(user, pass, this);
             // set the bar to visible before request
             progressBar.setVisibility(View.VISIBLE);
-            CompletableFuture<Response> responseFuture = CompletableFuture.supplyAsync(() -> {
-                try (Response response = client.newCall(request).execute()) {
-                    Log.d("HTTP Tag", "We got this response: " + (response.body() != null ? response.body().string() : null));
-                    Log.d("HTTP Tag", "We got this code" + response.code());
-                    return response;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).thenApplyAsync(response -> {
-                // once the request is done, remove loading spinner
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    if (response.isSuccessful()) {
-                        startActivity(intent);
-                    } else {
-                        this.showToast("Invalid Credentials!");
-                    }
-                });
-                return response;
-            });
-
+            CompletableFuture<Response> responseFuture = jsonInterface.connectToApi(url);
             new Thread(() -> {
                 try {
-                    responseFuture.get();
+                    Response response = responseFuture.get();
+                    runOnUiThread(() -> {
+                        if (response.isSuccessful()) {
+                            startActivity(intent);
+                        } else {
+                            this.showToast("Invalid Credentials!");
+                        }
+                    });
+
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 } catch (ExecutionException e) {
