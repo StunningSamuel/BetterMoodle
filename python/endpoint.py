@@ -1,11 +1,7 @@
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-import html
 import http
 import json
 import logging
-import re
-from typing import Callable
 from bs4 import BeautifulSoup
 from flask import Response, abort, request
 import httpx
@@ -158,9 +154,47 @@ def login(Session: httpx.Client, referer: str, username: str, password: str):
 
 
 def login_moodle(Session: httpx.Client, username: str, password: str):
-    return login(
-        Session, "https://moodle.bau.edu.lb/login/index.php", username, password
+    moodle_html = ""
+    # check that we actually HAVE moodle cookies!
+    # We may have logged in and obtained cookies for another service!
+    moodle_cookies = next(
+        filter(lambda cookie: "Moodle" in cookie.domain, Session.cookies.jar), None
     )
+
+    # if we already have a sesskey, just use it
+    if request.content_type == "application/json":
+        creds_json = request.json
+        assert creds_json
+        if now.timestamp() >= float(creds_json["expires"]):
+            # session key lasts 8 hours, quickly invalidate in order to not to check with Iconnect servers
+            return abort(
+                return_error_json(
+                    http.HTTPStatus.BAD_REQUEST,
+                    "Moodle session key expired! Please login again or refresh the session key.",
+                )
+            )
+        return Session.get(SECURE_URL).text
+
+    # otherwise we have to get it from moodle
+    # If we have NO cookies at ALL, just login to moodle.
+    if not Session.cookies.jar:
+        Session, moodle_html = login(
+            Session, "https://moodle.bau.edu.lb/login/index.php", username, password
+        )
+    else:
+        # we do have cookies, but they are not moodle cookies. We can bypass the login anyway
+        # the moodle dashboard will be returned
+        if not moodle_cookies:
+            url = "https://icas.bau.edu.lb:8443/cas/login"
+            params = {"service": "https://moodle.bau.edu.lb/login/index.php"}
+            moodle_html = (
+                Session.get(url=url, headers=login_headers, params=params)
+            ).text
+        else:
+            # we have moodle cookies, just get the page
+            moodle_html = Session.get(SECURE_URL).text
+
+    return moodle_html
 
 
 def moodle_api(
@@ -246,62 +280,36 @@ def moodle_api(
         response_json.update(
             sesskey=sesskey,
             userid=userid,
-            timestamp=now.timestamp(),
             expires=expires_in.timestamp(),
         )
         return response_json
-
-    moodle_html = ""
-    # check that we actually HAVE moodle cookies!
-    # We may have logged in and obtained cookies for another service!
-    moodle_cookies = next(
-        filter(lambda cookie: "Moodle" in cookie.domain, Session.cookies.jar), None
-    )
 
     # if we already have a sesskey, just use it
     if request.content_type == "application/json":
         creds_json = request.json
         assert creds_json
+        session_key = creds_json["sesskey"]
+        userid = creds_json["userid"]
         if now.timestamp() >= float(creds_json["expires"]):
             # session key lasts 8 hours, quickly invalidate in order to not to check with Iconnect servers
             return abort(
                 return_error_json(
-                    http.HTTPStatus.UNAUTHORIZED,
+                    http.HTTPStatus.BAD_REQUEST,
                     "Moodle session key expired! Please login again or refresh the session key.",
                 )
             )
-        session_key = creds_json["sesskey"]
-        userid = creds_json["userid"]
         return make_final_request(session_key, userid)
-
-    # otherwise we have to get it from moodle
-    # If we have NO cookies at ALL, just login to moodle.
-    if not Session.cookies.jar:
-        Session, moodle_html = login_moodle(Session, username, password)
     else:
-        # we do have cookies, but they are not moodle cookies. We can bypass the login anyway
-        # the moodle dashboard will be returned
-        if not moodle_cookies:
-            url = "https://icas.bau.edu.lb:8443/cas/login"
-            params = {"service": "https://moodle.bau.edu.lb/login/index.php"}
-            moodle_html = (
-                Session.get(url=url, headers=login_headers, params=params)
-            ).text
-        else:
-            # we have moodle cookies, just get the page
-            moodle_html = Session.get(SECURE_URL).text
-
-    try:
-        sesskey, userid = get_user_info(moodle_html)
-
-    # we have been redirected to login page, credentials are wrong.
-    except AttributeError:
-        return abort(
-            return_error_json(
-                http.HTTPStatus.UNAUTHORIZED,
-                "Provided credentials are wrong or server overloaded, please try again with correct ones.",
+        try:
+            moodle_html = login_moodle(Session, username, password)
+            session_key, userid = get_user_info(moodle_html)
+        # we have been redirected to login page, credentials are wrong.
+        except AttributeError:
+            return abort(
+                return_error_json(
+                    http.HTTPStatus.UNAUTHORIZED,
+                    "Provided credentials are wrong or server overloaded, please try again with correct ones.",
+                )
             )
-        )
 
-    final_json = make_final_request(sesskey, userid)
-    return final_json
+        return make_final_request(session_key, userid)

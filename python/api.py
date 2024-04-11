@@ -1,11 +1,13 @@
+from datetime import datetime, timedelta
 import http
 import json
 import os
-from flask import Flask, Response, abort, request
+from flask import Flask, Response, abort, redirect, request
 import httpx
 from functools import wraps
 from dotenv import load_dotenv
 from endpoint import (
+    login_moodle,
     moodle_api,
     return_error_json,
     serialize_session_cookies,
@@ -90,7 +92,19 @@ def add_metadata(response: Response):
         return response
 
 
+@app.route("/login", methods=["POST", "GET"])
+@requires_basic_auth
+def login():
+    username, password = get_creds()
+    with httpx.Client(timeout=None, follow_redirects=True) as Session:
+        Session = add_cookies(Session)
+        login_moodle(Session, username, password)
+        expires = (datetime.now() + timedelta(hours=8)).timestamp()
+        return serialize_session_cookies({"expires": expires}, Session)
+
+
 @app.route("/schedule", methods=["GET", "POST"])
+@requires_basic_auth
 def get_schedule_endpoint():
     with httpx.Client(timeout=None, follow_redirects=True) as Session:
         Session = add_cookies(Session)

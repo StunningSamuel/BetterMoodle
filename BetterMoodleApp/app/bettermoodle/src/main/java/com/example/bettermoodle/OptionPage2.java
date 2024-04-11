@@ -16,7 +16,6 @@ import com.google.android.material.navigation.NavigationView;
 public class OptionPage2 extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerLayout;
     Intent intent1 = new Intent(OptionPage2.this, MainActivity.class);
-    Intent intent3 = new Intent(OptionPage2.this, RegistrationClass.class);
 
 
     @Override
