@@ -1,31 +1,22 @@
 package com.example.bettermoodle;
 
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.MenuItem;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.widget.Toolbar;
-
-import android.content.Intent;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
-//import android.widget.Toolbar;
 
 import com.google.android.material.navigation.NavigationView;
 
 public class OptionPage2 extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerLayout;
     Intent intent1 = new Intent(OptionPage2.this, MainActivity.class);
-    Intent intent2 = new Intent(OptionPage2.this, NotificationActivity.class);
     Intent intent3 = new Intent(OptionPage2.this, RegistrationClass.class);
-
-
-
 
 
     @Override
@@ -44,26 +35,27 @@ public class OptionPage2 extends AppCompatActivity implements NavigationView.OnN
         drawerLayout.addDrawerListener(toggle);
         toggle.syncState();
 
-        if(savedInstanceState == null)
-        {
+        if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new HomeFragment()).commit();
             navigationView.setCheckedItem(R.id.nav_home);
         }
 
     }
+
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        if(item.getItemId() == R.id.nav_home) {
+        if (item.getItemId() == R.id.nav_home) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new HomeFragment()).commit();
         } else if (item.getItemId() == R.id.nav_schedule) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new ScheduleFragment()).commit();
         } else if (item.getItemId() == R.id.nav_notify) {
-            startActivity(intent2);
+            getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new NotificationsFragment()).commit();
         } else if (item.getItemId() == R.id.reg_button) {
-            startActivity(intent3);
+            getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new RegisterFragment()).commit();
         } else if (item.getItemId() == R.id.settingsbutton) {
+            // TODO: make dev settings not retarded
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new SettingsFragment()).commit();
-        } else if(item.getItemId() == R.id.logoutbutton)
+        } else if (item.getItemId() == R.id.logoutbutton)
             startActivity(intent1);
 
         drawerLayout.closeDrawer(GravityCompat.START);
@@ -72,7 +64,7 @@ public class OptionPage2 extends AppCompatActivity implements NavigationView.OnN
 
     @Override
     public void onBackPressed() {
-        if(drawerLayout.isDrawerOpen(GravityCompat.START)){
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START);
         } else {
             super.onBackPressed();
