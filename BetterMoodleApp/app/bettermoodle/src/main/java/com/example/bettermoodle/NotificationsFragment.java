@@ -16,13 +16,15 @@ import androidx.annotation.Nullable;
 import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
 
+
 public class NotificationsFragment extends Fragment implements MenuProvider {
 
-    ListView notifications;
+    ListView listView;
+    SearchView searchView;
     ArrayAdapter<String> arrayAdapter;
-    String[] notificationslist = {"Notification 1", "Notification 2", "Notification 3", "Notification 4"};
+    String[] notificationslist = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
 
-    @Override
+     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
@@ -32,10 +34,12 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        notifications = requireView().findViewById(R.id.listview);
-        arrayAdapter = new ArrayAdapter<>(requireActivity(), R.layout.notfi_list, notificationslist);
-        notifications.setAdapter(arrayAdapter);
+        listView = requireView().findViewById(R.id.listView);
+        searchView = requireView().findViewById(R.id.SearchView);
+        arrayAdapter = new ArrayAdapter<>(requireActivity(), R.layout.list_custometext, notificationslist);
+        listView.setAdapter(arrayAdapter);
     }
+    
 
     @Override
     public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
@@ -43,7 +47,6 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
         MenuItem menuItem = menu.findItem(R.id.Search);
         SearchView searchView = (SearchView) menuItem.getActionView();
         assert searchView != null;
-        searchView.setQueryHint("Search for announcement:");
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override

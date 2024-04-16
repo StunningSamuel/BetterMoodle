@@ -32,7 +32,7 @@ class JsonInterface(
     private val timeoutSeconds = 30L
     private var client = OkHttpClient.Builder()
         .addInterceptor(BasicAuthInterceptor(username, password))
-        .retryOnConnectionFailure(true)
+        //.retryOnConnectionFailure(true)
         .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
         .writeTimeout(timeoutSeconds, TimeUnit.SECONDS)
         .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
@@ -46,7 +46,7 @@ class JsonInterface(
     fun addCacheToClient(username: String, password: String, cacheDirectory: String) {
         this.client = OkHttpClient.Builder()
             .addInterceptor(BasicAuthInterceptor(username, password))
-            .retryOnConnectionFailure(true)
+            //.retryOnConnectionFailure(true)
             .cache(
                 Cache(
                     directory = File(cacheDirectory),
