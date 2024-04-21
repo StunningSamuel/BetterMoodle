@@ -112,6 +112,12 @@ def get_schedule_endpoint():
         return serialize_session_cookies(schedule(Session, username, password), Session)
 
 
+@app.route("/test_schedule")
+@requires_basic_auth
+def test_schedule():
+    return json.load(open("./reference/schedule.json"))
+
+
 @app.route("/moodle/<endpoint>", methods=["GET", "POST"])
 @requires_basic_auth
 def moodle_route_variable(endpoint: str):
