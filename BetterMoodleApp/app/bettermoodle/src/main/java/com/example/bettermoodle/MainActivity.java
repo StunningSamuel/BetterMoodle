@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
         assert prefs != null;
         String[] keys = {"username", "password", "ip"};
         EditText[] texts = {userid, password, ipaddress};
-        boolean hasCredentials = true;
+        boolean hasCredentials = true, allTextsNotEmpty = true;
         for (String key : keys) {
             boolean contains = prefs.contains(key);
             if (!contains) {
@@ -64,11 +64,20 @@ public class MainActivity extends AppCompatActivity {
                 texts[i].setText(value);
             }
         }
+        // then check if the texts are filled or not
+        for (EditText text : texts) {
+            String textValue = text.getText().toString();
+            if (textValue.isBlank() || textValue.isEmpty()) {
+                allTextsNotEmpty = false;
+            }
+        }
+
 
         boolean finalHasCredentials = hasCredentials;
+        boolean finalAllTextsNotEmpty = allTextsNotEmpty;
         loginbutton.setOnClickListener(view -> {
             // store information for future logins
-            if (!finalHasCredentials) {
+            if (!finalHasCredentials || finalAllTextsNotEmpty) {
                 for (int i = 0; i < 3; i++) {
                     prefs.edit().putString(keys[i], texts[i].getText().toString()).apply();
                 }

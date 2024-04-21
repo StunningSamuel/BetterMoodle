@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -83,13 +84,6 @@ class JsonInterface(
             }
 
             override fun onResponse(call: Call, response: Response) {
-                Log.d(
-                    "HTTP Tag",
-                    "We got this response: ${
-                        response.peekBody(Long.MAX_VALUE).string()
-                    }" // prevent logging from closing the connection yet
-
-                )
                 Log.d("HTTP Tag", "We got this code " + response.code)
                 responseFuture.complete(response)
             }
@@ -159,4 +153,18 @@ private fun Request.Builder.request(
 
 fun Any?.isNull(): Boolean {
     return this == null
+}
+
+fun Response.copyResponseBody(): String {
+    return this.peekBody(Long.MAX_VALUE).string();
+}
+
+
+fun JSONArray.toList(): ArrayList<Any> {
+    val tempList = arrayListOf<Any>();
+    for (i in 0..<this.length()) {
+        tempList.add(this[i])
+    }
+
+    return tempList
 }

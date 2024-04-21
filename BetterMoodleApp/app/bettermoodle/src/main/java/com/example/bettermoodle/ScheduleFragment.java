@@ -11,9 +11,14 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LiveData;
 import androidx.security.crypto.EncryptedSharedPreferences;
 
-import com.alamkanak.weekview.WeekView;
+import com.islandparadise14.mintable.MinTimeTableView;
+import com.islandparadise14.mintable.model.ScheduleEntity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class ScheduleFragment extends Fragment {
@@ -38,12 +43,12 @@ public class ScheduleFragment extends Fragment {
         EncryptedSharedPreferences preferences = getPrefs(this.context);
         assert preferences != null;
         ScheduleModel scheduleModel = new ScheduleModel(preferences);
-        scheduleModel.populateEvents();
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
-        WeekView weekView = view.findViewById(R.id.weekView);
-        ScheduleAdapter adapter = new ScheduleAdapter();
-        weekView.setAdapter(adapter);
-        scheduleModel.getEventsView().observe(getViewLifecycleOwner(), adapter::submitList);
+        MinTimeTableView table = view.findViewById(R.id.weekView);
+        table.initTable(List.of("Mon", "Tue", "Wen", "Thu", "Fri").toArray(new String[5]));
+        scheduleModel.setSchedule(table);
+        LiveData<ArrayList<ScheduleEntity>> data = scheduleModel.getEvents();
+        data.observe(getViewLifecycleOwner(), table::updateSchedules);
         return view;
     }
 }
