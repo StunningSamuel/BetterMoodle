@@ -139,6 +139,16 @@ fun getPrefs(context: Context): EncryptedSharedPreferences? {
     return sharedPreferences
 }
 
+fun serializeToPreferencesIfNotFound(
+    preferences: EncryptedSharedPreferences,
+    key: String,
+    value: String
+) {
+    if (!preferences.contains(key))
+        preferences.edit().putString(key, value)
+            .apply()
+}
+
 private fun Request.Builder.request(
     method: JsonInterface.HTTPMethod = JsonInterface.HTTPMethod.GET,
     body: String? = null
@@ -149,14 +159,6 @@ private fun Request.Builder.request(
         val jsonBody = body!!.toRequestBody("application/json".toMediaType())
         this.post(jsonBody)
     }
-}
-
-fun Any?.isNull(): Boolean {
-    return this == null
-}
-
-fun Response.copyResponseBody(): String {
-    return this.peekBody(Long.MAX_VALUE).string();
 }
 
 
