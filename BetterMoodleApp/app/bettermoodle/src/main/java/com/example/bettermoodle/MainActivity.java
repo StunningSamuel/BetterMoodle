@@ -83,9 +83,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
-            String user = userid.getText().toString(), pass = password.getText().toString(), ip = ipaddress.getText().toString();
-            String url = String.format("http://%s:5000/", ipaddress.getText().toString());
-            JsonInterface jsonInterface = new JsonInterface(user, pass, ip);
+            String url = "";
+            JsonInterface jsonInterface = new JsonInterface(this);
             // set the bar to visible before request
             progressBar.setVisibility(View.VISIBLE);
             CompletableFuture<Response> responseFuture = jsonInterface.connectToApi(url);

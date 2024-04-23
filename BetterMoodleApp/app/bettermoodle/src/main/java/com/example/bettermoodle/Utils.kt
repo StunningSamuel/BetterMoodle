@@ -2,6 +2,7 @@ package com.example.bettermoodle
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import okhttp3.Cache
@@ -18,15 +19,29 @@ import java.io.File
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 
 class JsonInterface(
-    username: String,
-    password: String,
-    private val baseIP: String
-
+    context: Context
 ) {
+    var preferences: EncryptedSharedPreferences
+        private set
+    var username: String
+        private set
+    var password: String
+        private set
+    private var baseIP: String
+
+    init {
+        this.preferences = getPrefs(context)!!
+        this.username = preferences.getString("username", "")!!
+        this.password = preferences.getString("password", "")!!
+        this.baseIP = "http://${preferences.getString("ip", "")!!}:5000/"
+    }
+
     private var lastResponse = JSONObject()
     private var sesskey: String? = null;
     private var userid: String? = null;
@@ -43,6 +58,7 @@ class JsonInterface(
     enum class HTTPMethod {
         GET, POST
     }
+
 
     fun addCacheToClient(username: String, password: String, cacheDirectory: String) {
         this.client = OkHttpClient.Builder()
@@ -64,7 +80,7 @@ class JsonInterface(
 
     @JvmOverloads
     fun connectToApi(
-        url: String,
+        endpoint: String,
         method: HTTPMethod = HTTPMethod.GET,
         body: String? = null
     ): CompletableFuture<Response> {
@@ -73,7 +89,7 @@ class JsonInterface(
         // keep in mind future needs to block to get result
         val responseFuture = CompletableFuture<Response>()
         val request = Request.Builder()
-            .url(url)
+            .url(this.baseIP + endpoint)
             .request(method, body)
             .build()
 
@@ -95,6 +111,23 @@ class JsonInterface(
     }
 
 
+    fun postResponseToListener(
+        endpoint: String,
+        liveData: MutableLiveData<String>
+    ) {
+        val future = connectToApi(endpoint)
+        thread(start = true) {
+            try {
+                liveData.postValue(future.get().body!!.string())
+            } catch (e: ExecutionException) {
+                logStackTrace("HTTP Tag", e)
+            } catch (e: InterruptedException) {
+                logStackTrace("HTTP Tag", e)
+            }
+        }
+    }
+
+
     fun tagNotifications(x: Any): Unit {
 
     }
@@ -107,6 +140,10 @@ class JsonInterface(
 
     }
 
+}
+
+fun createLiveData(): MutableLiveData<String> {
+    return MutableLiveData<String>()
 }
 
 @Suppress("SameParameterValue")

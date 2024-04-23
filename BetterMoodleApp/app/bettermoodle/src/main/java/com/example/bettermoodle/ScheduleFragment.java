@@ -1,7 +1,5 @@
 package com.example.bettermoodle;
 
-import static com.example.bettermoodle.UtilsKt.getPrefs;
-
 import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -13,7 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LiveData;
-import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.lifecycle.MutableLiveData;
 
 import com.islandparadise14.mintable.MinTimeTableView;
 import com.islandparadise14.mintable.model.ScheduleEntity;
@@ -26,6 +24,8 @@ public class ScheduleFragment extends Fragment {
 
     private Context context;
     private ScheduleModel model;
+
+    private MutableLiveData<String> jsonResponse;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -55,9 +55,7 @@ public class ScheduleFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        EncryptedSharedPreferences preferences = getPrefs(this.context);
-        assert preferences != null;
-        ScheduleModel scheduleModel = new ScheduleModel(preferences);
+        ScheduleModel scheduleModel = new ScheduleModel(this.context);
         this.model = scheduleModel;
         View view = inflater.inflate(R.layout.fragment_schedule, container, false);
         MinTimeTableView table = view.findViewById(R.id.weekView);

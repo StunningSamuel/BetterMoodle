@@ -1,5 +1,6 @@
 package com.example.bettermoodle
 
+import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -27,23 +28,19 @@ data class Course(
     )
 
 
-internal class ScheduleModel(preferences: EncryptedSharedPreferences) : ViewModel() {
+internal class ScheduleModel(context: Context) : ViewModel() {
     private var preferences: EncryptedSharedPreferences
     private var jsonInterface: JsonInterface
     private var username: String
     private var password: String
-    private var baseIP: String
     var events: MutableLiveData<ArrayList<ScheduleEntity>> = MutableLiveData()
         private set
 
     init {
-        this.username = preferences.getString("username", "")!!
-        this.password = preferences.getString("password", "")!!
-        // yes we hardcoded the port, deal with it
-        this.baseIP = "http://${preferences.getString("ip", "")!!}:5000/"
-        val jsonInterface = JsonInterface(username, password, baseIP)
-        this.jsonInterface = jsonInterface
-        this.preferences = preferences
+        this.jsonInterface = JsonInterface(context)
+        this.username = jsonInterface.username
+        this.preferences = jsonInterface.preferences
+        this.password = jsonInterface.password
     }
 
 
@@ -156,11 +153,12 @@ internal class ScheduleModel(preferences: EncryptedSharedPreferences) : ViewMode
         }
         refreshValue("schedule", refreshSchedule)
         refreshValue("colorMap", refreshColors)
+
         thread(start = true) {
             try {
                 val scheduleResponse = if (!preferences.contains("schedule")) {
                     val scheduleResponseFuture =
-                        jsonInterface.connectToApi(this.baseIP + "schedule")
+                        jsonInterface.connectToApi("schedule")
                     scheduleResponseFuture.get().body!!.string()
                 } else {
                     preferences.getString("schedule", "")!!
