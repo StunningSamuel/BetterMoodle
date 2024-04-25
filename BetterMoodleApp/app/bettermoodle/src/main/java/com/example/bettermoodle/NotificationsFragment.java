@@ -1,7 +1,5 @@
 package com.example.bettermoodle;
 
-import static com.example.bettermoodle.UtilsKt.createLiveData;
-
 import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -18,7 +16,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.MutableLiveData;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
@@ -34,9 +31,9 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
     SearchView searchView;
     ArrayAdapter<String> arrayAdapter;
     JsonInterface jsonInterface;
-    String[] notificationslist = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+//    String[] notificationslist = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
 
-    public class Data {
+    public static class Data {
 
         @SerializedName("notifications")
         @Expose
@@ -45,7 +42,7 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
     }
 
 
-    public class ResponseClass {
+    public static class ResponseClass {
 
         @SerializedName("error")
         @Expose
@@ -56,7 +53,7 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
 
     }
 
-    public class Notification {
+    public static class Notification {
 
         @SerializedName("id")
         @Expose
@@ -126,9 +123,14 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
 
 
     @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
+
+    @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        this.jsonInterface = new JsonInterface(context);
+        this.jsonInterface = new JsonInterface(context, "moodle/notifications");
     }
 
     @Override
@@ -145,9 +147,7 @@ public class NotificationsFragment extends Fragment implements MenuProvider {
         super.onViewCreated(view, savedInstanceState);
         listView = requireView().findViewById(R.id.listView);
         searchView = requireView().findViewById(R.id.SearchView);
-        MutableLiveData<String> response = createLiveData();
-        jsonInterface.postResponseToListener("moodle/notifications", response);
-        response.observe(getViewLifecycleOwner(), s -> {
+        jsonInterface.postResponseToListener().observe(getViewLifecycleOwner(), s -> {
             Gson gson = new Gson();
             ResponseClass responseClass = gson.fromJson(s, ResponseClass.class);
             Notification[] notifications = responseClass.data.notifications.toArray(new Notification[0]);

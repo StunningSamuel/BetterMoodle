@@ -1,7 +1,9 @@
 package com.example.bettermoodle
 
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
@@ -15,31 +17,40 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
 
+
+interface JsonObserver {
+    fun onJsonReady(json: String)
+}
 
 class JsonInterface(
-    context: Context
+    context: Context,
+    endpoint: String
 ) {
+    private var endpoint: String
+    private val context: Context
+    private var liveData: MutableLiveData<String>
     var preferences: EncryptedSharedPreferences
         private set
     var username: String
         private set
     var password: String
         private set
-    private var baseIP: String
+    private var ip: String
 
     init {
+        this.endpoint = endpoint
+        this.context = context
         this.preferences = getPrefs(context)!!
         this.username = preferences.getString("username", "")!!
         this.password = preferences.getString("password", "")!!
-        this.baseIP = "http://${preferences.getString("ip", "")!!}:5000/"
+        this.ip = "http://${preferences.getString("ip", "")!!}:5000/$endpoint"
+        this.liveData = MutableLiveData<String>()
     }
 
     private var lastResponse = JSONObject()
@@ -48,7 +59,12 @@ class JsonInterface(
     private val timeoutSeconds = 30L
     private var client = OkHttpClient.Builder()
         .addInterceptor(BasicAuthInterceptor(username, password))
-        //.retryOnConnectionFailure(true)
+        .cache(
+            Cache(
+                directory = context.cacheDir,
+                maxSize = 10L * 1024L * 1024L
+            )
+        )
         .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
         .writeTimeout(timeoutSeconds, TimeUnit.SECONDS)
         .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
@@ -56,31 +72,12 @@ class JsonInterface(
         .build()
 
     enum class HTTPMethod {
-        GET, POST
+        GET,
     }
 
-
-    fun addCacheToClient(username: String, password: String, cacheDirectory: String) {
-        this.client = OkHttpClient.Builder()
-            .addInterceptor(BasicAuthInterceptor(username, password))
-            //.retryOnConnectionFailure(true)
-            .cache(
-                Cache(
-                    directory = File(cacheDirectory),
-                    maxSize = 10L * 1024L * 1024L
-                )
-            )
-            .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .writeTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .callTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .build()
-
-    }
 
     @JvmOverloads
     fun connectToApi(
-        endpoint: String,
         method: HTTPMethod = HTTPMethod.GET,
         body: String? = null
     ): CompletableFuture<Response> {
@@ -89,7 +86,7 @@ class JsonInterface(
         // keep in mind future needs to block to get result
         val responseFuture = CompletableFuture<Response>()
         val request = Request.Builder()
-            .url(this.baseIP + endpoint)
+            .url(this.ip)
             .request(method, body)
             .build()
 
@@ -111,22 +108,33 @@ class JsonInterface(
     }
 
 
-    fun postResponseToListener(
-        endpoint: String,
-        liveData: MutableLiveData<String>
-    ) {
-        val future = connectToApi(endpoint)
-        thread(start = true) {
+    @JvmOverloads
+    fun postResponseToListener(invalidatorCallback: (prefs: EncryptedSharedPreferences) -> Boolean = { _ -> true }): MutableLiveData<String> {
+        val future = connectToApi()
+        future.whenComplete { t, _ ->
             try {
-                liveData.postValue(future.get().body!!.string())
+                val jsonString = t.body!!.string()
+                serializeToPreferencesIfNotFound(preferences, this.endpoint, jsonString)
+                liveData.postValue(jsonString)
             } catch (e: ExecutionException) {
                 logStackTrace("HTTP Tag", e)
             } catch (e: InterruptedException) {
                 logStackTrace("HTTP Tag", e)
             }
+
         }
+        return liveData
     }
 
+
+    fun getCachedJson(): String {
+        return preferences.getString(endpoint, "")!!
+    }
+
+    private fun Context?.getLifeCycleOwner(): AppCompatActivity? = when {
+        this is ContextWrapper -> if (this is AppCompatActivity) this else this.baseContext.getLifeCycleOwner()
+        else -> null
+    }
 
     fun tagNotifications(x: Any): Unit {
 
@@ -142,9 +150,6 @@ class JsonInterface(
 
 }
 
-fun createLiveData(): MutableLiveData<String> {
-    return MutableLiveData<String>()
-}
 
 @Suppress("SameParameterValue")
 fun logStackTrace(tag: String, e: Exception) {
@@ -176,12 +181,14 @@ fun getPrefs(context: Context): EncryptedSharedPreferences? {
     return sharedPreferences
 }
 
+@JvmOverloads
 fun serializeToPreferencesIfNotFound(
     preferences: EncryptedSharedPreferences,
     key: String,
-    value: String
+    value: String,
+    invalidatorCallback: (prefs: EncryptedSharedPreferences) -> Boolean = { _ -> true }
 ) {
-    if (!preferences.contains(key))
+    if (!preferences.contains(key) && invalidatorCallback(preferences))
         preferences.edit().putString(key, value)
             .apply()
 }

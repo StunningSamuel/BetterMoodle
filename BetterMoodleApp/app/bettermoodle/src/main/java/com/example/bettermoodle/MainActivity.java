@@ -83,11 +83,10 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
-            String url = "";
-            JsonInterface jsonInterface = new JsonInterface(this);
+            JsonInterface jsonInterface = new JsonInterface(this, "");
             // set the bar to visible before request
             progressBar.setVisibility(View.VISIBLE);
-            CompletableFuture<Response> responseFuture = jsonInterface.connectToApi(url);
+            CompletableFuture<Response> responseFuture = jsonInterface.connectToApi();
             // Threads die of natural causes when they return
             // lol
             new Thread(() -> {

@@ -37,7 +37,7 @@ internal class ScheduleModel(context: Context) : ViewModel() {
         private set
 
     init {
-        this.jsonInterface = JsonInterface(context)
+        this.jsonInterface = JsonInterface(context, "schedule")
         this.username = jsonInterface.username
         this.preferences = jsonInterface.preferences
         this.password = jsonInterface.password
@@ -158,7 +158,7 @@ internal class ScheduleModel(context: Context) : ViewModel() {
             try {
                 val scheduleResponse = if (!preferences.contains("schedule")) {
                     val scheduleResponseFuture =
-                        jsonInterface.connectToApi("schedule")
+                        jsonInterface.connectToApi()
                     scheduleResponseFuture.get().body!!.string()
                 } else {
                     preferences.getString("schedule", "")!!
