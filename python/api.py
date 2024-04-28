@@ -7,6 +7,7 @@ import httpx
 from functools import wraps
 from dotenv import load_dotenv
 from endpoint import (
+    get_student_info,
     login_moodle,
     moodle_api,
     return_error_json,
@@ -116,6 +117,17 @@ def get_schedule_endpoint():
 @requires_basic_auth
 def test_schedule():
     return json.load(open("./reference/schedule.json"))
+
+
+@app.route("/student_info")
+@requires_basic_auth
+def student_info():
+    with httpx.Client(timeout=None, follow_redirects=True) as Session:
+        Session = add_cookies(Session)
+        username, password = get_creds()
+        return serialize_session_cookies(
+            get_student_info(Session, username, password), Session
+        )
 
 
 @app.route("/moodle/<endpoint>", methods=["GET", "POST"])

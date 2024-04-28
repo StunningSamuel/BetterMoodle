@@ -1,9 +1,7 @@
 package com.example.bettermoodle
 
 import android.content.Context
-import android.content.ContextWrapper
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
@@ -19,6 +17,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.security.GeneralSecurityException
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -53,9 +55,6 @@ class JsonInterface(
         this.liveData = MutableLiveData<String>()
     }
 
-    private var lastResponse = JSONObject()
-    private var sesskey: String? = null;
-    private var userid: String? = null;
     private val timeoutSeconds = 30L
     private var client = OkHttpClient.Builder()
         .addInterceptor(BasicAuthInterceptor(username, password))
@@ -72,7 +71,8 @@ class JsonInterface(
         .build()
 
     enum class HTTPMethod {
-        GET,
+        GET, POST;
+
     }
 
 
@@ -109,19 +109,31 @@ class JsonInterface(
 
 
     @JvmOverloads
-    fun postResponseToListener(invalidatorCallback: (prefs: EncryptedSharedPreferences) -> Boolean = { _ -> true }): MutableLiveData<String> {
-        val future = connectToApi()
-        future.whenComplete { t, _ ->
-            try {
-                val jsonString = t.body!!.string()
-                serializeToPreferencesIfNotFound(preferences, this.endpoint, jsonString)
-                liveData.postValue(jsonString)
-            } catch (e: ExecutionException) {
-                logStackTrace("HTTP Tag", e)
-            } catch (e: InterruptedException) {
-                logStackTrace("HTTP Tag", e)
-            }
+    fun postResponseToListener(forceNetwork: Boolean = false): MutableLiveData<String> {
+        if (getCachedJson() == "" || forceNetwork) {
+            val future = connectToApi()
+            future.whenComplete { t, _ ->
+                try {
+                    val jsonString = t.body!!.string()
+                    serializeToPreferencesIfNotFound(
+                        preferences,
+                        this.endpoint,
+                        jsonString,
+                        true
+                    )
+                    liveData.postValue(jsonString)
+                } catch (e: ExecutionException) {
+                    logStackTrace("HTTP Tag", e)
+                } catch (e: InterruptedException) {
+                    logStackTrace("HTTP Tag", e)
+                }
 
+            }
+        } else {
+            // if we already have a response, just return from cache
+            // THIS CLASS IS NOT RESPONSIBLE FOR REFRESHING DATA
+            // MAKE SURE ANOTHER CLASS DOES
+            liveData.postValue(getCachedJson())
         }
         return liveData
     }
@@ -131,9 +143,16 @@ class JsonInterface(
         return preferences.getString(endpoint, "")!!
     }
 
-    private fun Context?.getLifeCycleOwner(): AppCompatActivity? = when {
-        this is ContextWrapper -> if (this is AppCompatActivity) this else this.baseContext.getLifeCycleOwner()
-        else -> null
+    private fun getCachedJsonTimestamp(): Duration? {
+        val expires: Long = JSONObject(getCachedJson()).getLong("expires")
+        val expiresDateTime =
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(expires), ZoneId.systemDefault())
+        val now = LocalDateTime.now()
+        return Duration.between(now, expiresDateTime)
+    }
+
+    fun moodleInvalidator(): Boolean {
+        return getCachedJsonTimestamp()!!.toHours() >= 8
     }
 
     fun tagNotifications(x: Any): Unit {
@@ -186,9 +205,9 @@ fun serializeToPreferencesIfNotFound(
     preferences: EncryptedSharedPreferences,
     key: String,
     value: String,
-    invalidatorCallback: (prefs: EncryptedSharedPreferences) -> Boolean = { _ -> true }
+    overwrite: Boolean = false
 ) {
-    if (!preferences.contains(key) && invalidatorCallback(preferences))
+    if (!preferences.contains(key) || overwrite)
         preferences.edit().putString(key, value)
             .apply()
 }

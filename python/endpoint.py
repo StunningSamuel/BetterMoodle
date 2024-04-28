@@ -1,7 +1,10 @@
+import base64
 from datetime import datetime, timedelta
 import http
 import json
 import logging
+import re
+from urllib.parse import parse_qs, urlparse
 from bs4 import BeautifulSoup
 from flask import Response, abort, request
 import httpx
@@ -195,6 +198,31 @@ def login_moodle(Session: httpx.Client, username: str, password: str):
             moodle_html = Session.get(SECURE_URL).text
 
     return moodle_html
+
+
+def get_student_info(Session: httpx.Client, username: str, password: str):
+    resp = Session.get(
+        "https://mis.bau.edu.lb/web/v12/iconnectv12/base/portalhome.aspx"
+    )
+    referer = "https://mis.bau.edu.lb/web/v12/iconnectv12/cas/sso.aspx"
+    Session, resp = login(
+        Session,
+        referer,
+        username,
+        password,
+    )
+    student_name = css_selector(resp, "#lblFullName").text  # type: ignore
+    student_image_link = (
+        re.search(
+            "'([^']*)'", css_selector(resp, ".text-center > div >div").attrs["style"]  # type: ignore
+        )
+        .group()  # type: ignore
+        .strip("'")
+    )
+    student_image_b64 = base64.b64encode(
+        Session.get(student_image_link).read()
+    ).decode()
+    return {"name": student_name, "image": student_image_b64}
 
 
 def moodle_api(
