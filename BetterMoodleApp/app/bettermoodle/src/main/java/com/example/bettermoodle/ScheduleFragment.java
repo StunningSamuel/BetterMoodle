@@ -11,7 +11,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 
 import com.islandparadise14.mintable.MinTimeTableView;
 import com.islandparadise14.mintable.model.ScheduleEntity;
@@ -24,8 +23,6 @@ public class ScheduleFragment extends Fragment {
 
     private Context context;
     private ScheduleModel model;
-
-    private MutableLiveData<String> jsonResponse;
 
     @Override
     public void onAttach(@NonNull Context context) {

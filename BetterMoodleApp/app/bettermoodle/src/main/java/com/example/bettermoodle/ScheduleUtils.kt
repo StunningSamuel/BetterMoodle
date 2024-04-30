@@ -83,23 +83,18 @@ internal class ScheduleModel(context: Context) : ViewModel() {
     private fun populateEvents(jsonString: String): ArrayList<ScheduleEntity> {
         val eventsArray = ArrayList<ScheduleEntity>()
         val colors = listOf(
-            "#696969",
-            "#2e8b57",
-            "#808000",
-            "#ff0000",
-            "#ff8c00",
-            "#ffd700",
-            "#7fff00",
-            "#ba55d3",
-            "#00fa9a",
-            "#e9967a",
-            "#00ffff",
-            "#ff00ff",
-            "#1e90ff",
-            "#eee8aa",
-            "#dda0dd",
-            "#ff1493",
-            "#87cefa"
+            "#b1e6ff",
+            "#ffafa0",
+            "#ffdf9f",
+            "#a6ff98",
+            "#acb2cb",
+            "#e1ffb3",
+            "#c9ccff",
+            "#75f3ff",
+            "#f9c064",
+            "#c3baab",
+            "#d4a373",
+            "#e9ff70"
         )
         val colorMap: MutableMap<String, String> = if (preferences.contains("colorMap")) {
             Json.decodeFromString(preferences.getString("colorMap", "")!!)
@@ -174,5 +169,36 @@ internal class ScheduleModel(context: Context) : ViewModel() {
 
 
 }
+
+fun scheduleToArrayList(context: Context): ArrayList<String> {
+    val preferences = getPrefs(context)
+    val cachedScheduleString = preferences!!.getString("schedule", "")!!
+    val scheduleToArray = { json: String ->
+        val coursesList = ArrayList<String>()
+        val schedule = JSONObject(json)
+        val days = listOf(schedule["M"], schedule["T"], schedule["W"], schedule["R"])
+        val daysMap = hashMapOf(
+            Pair(0, "Monday"),
+            Pair(1, "Tuesday"),
+            Pair(2, "Wednesday"),
+            Pair(3, "Thursday"),
+        )
+        days.forEachIndexed { index, day ->
+            daysMap[index]?.let { coursesList.add(it) }
+            val courseNames = ArrayList<String>()
+            for (i in 0..<(day as JSONArray).length()) {
+                val obj = day[i] as JSONObject
+                courseNames.add("${obj["name"]}\n${obj["time"]} (${obj["location"]})")
+            }
+            coursesList.addAll(courseNames)
+        }
+
+        coursesList
+    }
+
+    return scheduleToArray(cachedScheduleString)
+
+}
+
 
 

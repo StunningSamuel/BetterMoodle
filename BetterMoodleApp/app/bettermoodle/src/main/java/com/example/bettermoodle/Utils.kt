@@ -1,6 +1,9 @@
 package com.example.bettermoodle
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -15,6 +18,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.time.Duration
@@ -143,6 +147,7 @@ class JsonInterface(
         return preferences.getString(endpoint, "")!!
     }
 
+
     private fun getCachedJsonTimestamp(): Duration? {
         val expires: Long = JSONObject(getCachedJson()).getLong("expires")
         val expiresDateTime =
@@ -173,6 +178,11 @@ class JsonInterface(
 @Suppress("SameParameterValue")
 fun logStackTrace(tag: String, e: Exception) {
     Log.e(tag, e.cause.toString())
+}
+
+fun clearPrefs(context: Context) {
+    val prefs = getPrefs(context)
+    prefs!!.edit().clear().apply()
 }
 
 fun getPrefs(context: Context): EncryptedSharedPreferences? {
@@ -232,4 +242,19 @@ fun JSONArray.toList(): ArrayList<Any> {
     }
 
     return tempList
+}
+
+fun bitmapToB64(bitmap: Bitmap): String {
+    val outputStream = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+    return Base64.encodeToString(
+        outputStream.toByteArray(),
+        Base64.DEFAULT
+    )!!
+}
+
+fun b64ToBitmap(encodedString: String): Bitmap {
+    val decodedString: ByteArray = Base64.decode(encodedString, Base64.DEFAULT)
+    return BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)!!
+
 }

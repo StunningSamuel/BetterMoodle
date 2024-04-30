@@ -1,5 +1,7 @@
 package com.example.bettermoodle;
 
+import static com.example.bettermoodle.UtilsKt.clearPrefs;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -12,6 +14,7 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
+
 
 public class OptionPage2 extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerLayout;
@@ -51,8 +54,11 @@ public class OptionPage2 extends AppCompatActivity implements NavigationView.OnN
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new NotificationsFragment()).commit();
         } else if (item.getItemId() == R.id.reg_button) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new RegisterFragment()).commit();
-        } else if (item.getItemId() == R.id.logoutbutton)
+        } else if (item.getItemId() == R.id.logoutbutton) {
+            clearPrefs(this);
             startActivity(intent1);
+
+        }
 
         drawerLayout.closeDrawer(GravityCompat.START);
         return true;

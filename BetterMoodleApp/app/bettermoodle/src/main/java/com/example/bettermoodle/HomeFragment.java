@@ -1,10 +1,9 @@
 package com.example.bettermoodle;
 
+import static com.example.bettermoodle.UtilsKt.b64ToBitmap;
+
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,10 +49,10 @@ public class HomeFragment extends Fragment {
                 JSONObject response = new JSONObject(s);
                 String name = response.getString("name");
                 String image = response.getString("image");
-                byte[] decodedString = Base64.decode(image, Base64.DEFAULT);
-                Bitmap decodedBytes = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+//                byte[] decodedString = Base64.decode(image, Base64.DEFAULT);
+//                Bitmap decodedBytes = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
                 userName.setText(name);
-                userAvatar.setImageBitmap(decodedBytes);
+                userAvatar.setImageBitmap(b64ToBitmap(image));
             } catch (JSONException e) {
 
                 throw new RuntimeException(e);
