@@ -60,29 +60,21 @@ class ScheduleWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxSize().background(Color(0xfffff8dc)),
                 Alignment.Center
             ) {
-                LazyColumn(modifier = GlanceModifier.fillMaxWidth().padding(20.dp)) {
-                    items(scheduleArray.size) { index ->
-//                        val insertSpacer =
-//                            if (index < scheduleArray.size && scheduleArray[(index + 1)] in listOf(
-//                                    "Monday",
-//                                    "Tuesday",
-//                                    "Wednesday",
-//                                    "Thursday"
-//                                )
-//                            ) {
-//                            } else {
-//                            }
-                        Text(
-                            style = TextStyle(
-                                FixedColorProvider(Color.Black),
-                                fontSize = 20.sp,
-                                fontFamily = FontFamily("@font/comfortaacegular"),
-                            ),
-                            text = scheduleArray[index] + "\n"
-                        )
+                if (scheduleArray != null) {
+                    LazyColumn(modifier = GlanceModifier.fillMaxWidth().padding(20.dp)) {
+                        items(scheduleArray.size) { index ->
+                            Text(
+                                style = TextStyle(
+                                    FixedColorProvider(Color.Black),
+                                    fontSize = 20.sp,
+                                    fontFamily = FontFamily("@font/comfortaacegular"),
+                                ),
+                                text = scheduleArray[index] + "\n"
+                            )
+                        }
+
+
                     }
-
-
                 }
             }
         }

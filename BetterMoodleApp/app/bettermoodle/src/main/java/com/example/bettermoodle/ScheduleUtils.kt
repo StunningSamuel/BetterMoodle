@@ -170,9 +170,11 @@ internal class ScheduleModel(context: Context) : ViewModel() {
 
 }
 
-fun scheduleToArrayList(context: Context): ArrayList<String> {
+fun scheduleToArrayList(context: Context): ArrayList<String>? {
     val preferences = getPrefs(context)
-    val cachedScheduleString = preferences!!.getString("schedule", "")!!
+    val cachedScheduleString = preferences!!.getString("schedule", "")
+    if (cachedScheduleString.isNullOrBlank())
+        return null
     val scheduleToArray = { json: String ->
         val coursesList = ArrayList<String>()
         val schedule = JSONObject(json)
