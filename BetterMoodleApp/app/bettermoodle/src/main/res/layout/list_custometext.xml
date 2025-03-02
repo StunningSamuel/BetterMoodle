@@ -7,7 +7,7 @@
     android:text="Announcement"
     android:textSize="20sp"
     android:gravity="center_vertical"
-    android:fontFamily="@font/comfortaacegular"
+    android:fontFamily="@font/segoeui"
     android:padding="20dp">
 
 </TextView>
