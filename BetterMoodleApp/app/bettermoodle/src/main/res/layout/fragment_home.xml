@@ -1,182 +1,277 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".HomeFragment">
-        
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/Dashboard"
-        android:layout_marginTop="20dp">
+    android:layout_height="wrap_content"
+    android:id="@+id/Dashboard"
+    android:background="#f4f4f4"
+    android:layout_marginTop="20dp">
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:id="@+id/home_welcome"
-            android:text="Welcome, [Student Name]!"
-            android:textSize="25sp"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="45dp"
-            android:fontFamily="@font/segoeui"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/def_user_photo" />
+    <androidx.cardview.widget.CardView
+        android:id="@+id/student_info_card"
+        android:layout_width="369dp"
+        android:layout_height="160dp"
+        android:layout_margin="15dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
-            android:layout_width="0dp"
-            android:layout_height="160dp"
             android:id="@+id/def_user_photo"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_marginRight="20dp"
             android:src="@drawable/baseline_person_24"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginEnd="16dp"
-            app:layout_constraintStart_toEndOf="@id/home_welcome"/>
+            app:layout_constraintEnd_toStartOf="@+id/student_name"
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="230dp"
-            android:id="@+id/row1"
-            android:orientation="horizontal"
-            android:layout_marginTop="10dp"
-            android:padding="10dp"
-            app:layout_constraintHorizontal_bias="0.0"
+        <TextView
+            android:id="@+id/student_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="180dp"
+            android:layout_marginTop="40dp"
+            android:fontFamily="@font/segoeui"
+            android:text="[Student Name]"
+            android:textSize="25sp">
+
+        </TextView>
+
+        <TextView
+            android:id="@+id/student_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="180dp"
+            android:layout_marginTop="90dp"
+            android:fontFamily="@font/segoeui"
+            android:text="[Student ID]"
+            android:textSize="25sp"
+            app:layout_constraintStart_toEndOf="@id/def_user_photo"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/def_user_photo">
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:id="@+id/student_info_card"
-                android:layout_margin="10dp"
-                android:layout_weight="1"
-                app:cardElevation="20dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:id="@+id/student_id"
-                        android:text="Student ID:"
-                        android:textSize="20sp"
-                        android:fontFamily="@font/segoeui"
-                        android:layout_marginTop="10dp"
-                        android:layout_centerHorizontal="true">
-                    </TextView>
-
-                </RelativeLayout>
+    </androidx.cardview.widget.CardView>
 
 
+    <LinearLayout
+        android:id="@+id/row1"
+        android:layout_width="0dp"
+        android:layout_height="210dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/student_info_card">
 
-            </androidx.cardview.widget.CardView>
-
-
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:id="@+id/recent_card"
-                android:layout_margin="10dp"
-                android:layout_weight="1"
-                app:cardElevation="20dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:id="@+id/recent_info"
-                        android:text="Most Recent Course"
-                        android:textSize="20sp"
-                        android:gravity="center"
-                        android:fontFamily="@font/segoeui"
-                        android:layout_marginTop="10dp"
-                        android:layout_centerHorizontal="true">
-                    </TextView>
-
-                </RelativeLayout>
-
-            </androidx.cardview.widget.CardView>
-
-        </LinearLayout>
-
-        <LinearLayout
+        <androidx.cardview.widget.CardView
+            android:id="@+id/program_card"
             android:layout_width="0dp"
-            android:layout_height="230dp"
-            android:id="@+id/row2"
-            android:orientation="horizontal"
-            android:layout_marginTop="10dp"
-            android:padding="10dp"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/row1">
+            android:layout_height="match_parent"
+            android:layout_margin="10dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="20dp">
 
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:id="@+id/a_and_ex_card"
-                android:layout_margin="10dp"
-                android:layout_weight="1"
-                app:cardElevation="20dp">
+                android:orientation="vertical">
 
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                <TextView
+                    android:id="@+id/program_header"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:text="Program"
+                    android:textSize="20sp"
+                    android:textStyle="bold">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:id="@+id/a_and_ex_info"
-                        android:text="Assignments and Exams"
-                        android:textSize="20sp"
-                        android:gravity="center"
-                        android:fontFamily="@font/segoeui"
-                        android:layout_marginTop="10dp"
-                        android:layout_centerHorizontal="true">
-                    </TextView>
+                </TextView>
 
-                </RelativeLayout>
+                <TextView
+                    android:id="@+id/program_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:gravity="center_horizontal"
+                    android:paddingHorizontal="12dp"
+                    android:text="Computer Engineering"
+                    android:textSize="20sp">
+                </TextView>
 
-            </androidx.cardview.widget.CardView>
 
-            <androidx.cardview.widget.CardView
-                android:layout_width="0dp"
+            </LinearLayout>
+
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cgpa_card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="10dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="16dp"
+
+            app:cardElevation="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:id="@+id/courses_card"
-                android:layout_margin="10dp"
-                android:layout_weight="1"
-                app:cardElevation="20dp">
+                android:orientation="vertical">
 
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                <TextView
+                    android:id="@+id/CGPA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:gravity="center"
+                    android:text="CGPA"
+                    android:textSize="20sp"
+                    android:textStyle="bold">
+                </TextView>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:id="@+id/courses_info"
-                        android:text="All Courses"
-                        android:textSize="20sp"
-                        android:fontFamily="@font/segoeui"
-                        android:layout_marginTop="10dp"
-                        android:layout_centerHorizontal="true">
-                    </TextView>
+                <TextView
+                    android:id="@+id/CGPA_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:text="4.0"
+                    android:textSize="20sp">
+                </TextView>
 
-                </RelativeLayout>
+            </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+        </androidx.cardview.widget.CardView>
 
-        </LinearLayout>
+    </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:id="@+id/row2"
+        android:layout_width="0dp"
+        android:layout_height="210dp"
+        android:layout_marginTop="1dp"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/row1">
 
-</ScrollView>
+        <androidx.cardview.widget.CardView
+            android:id="@+id/sgpa_card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="10dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/SGPA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:text="SGPA"
+                    android:textSize="20sp"
+                    android:textStyle="bold">
+
+                </TextView>
+
+                <TextView
+                    android:id="@+id/SGPA_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:padding="10dp"
+                    android:text="4.0"
+                    android:textSize="20sp">
+                </TextView>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/credits_card"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="10dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/Credits"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:text="Credits Completed"
+                    android:textSize="20sp"
+                    android:textStyle="bold">
+
+                </TextView>
+
+                <TextView
+                    android:id="@+id/Credits_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="@font/segoeui"
+                    android:padding="10dp"
+                    android:text="150"
+                    android:textSize="20sp">
+
+                </TextView>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
