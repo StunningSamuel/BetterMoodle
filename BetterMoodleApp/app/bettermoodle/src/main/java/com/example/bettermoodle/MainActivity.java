@@ -5,7 +5,6 @@ import static com.example.bettermoodle.UtilsKt.getPrefs;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -14,11 +13,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.security.crypto.EncryptedSharedPreferences;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
-import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     EditText userid;
@@ -50,66 +44,68 @@ public class MainActivity extends AppCompatActivity {
         assert prefs != null;
         String[] keys = {"username", "password", "ip"};
         EditText[] texts = {userid, password, ipaddress};
-        boolean hasCredentials = true, allTextsNotEmpty = true;
-        for (String key : keys) {
-            boolean contains = prefs.contains(key);
-            if (!contains) {
-                hasCredentials = false;
-            }
-        }
-        if (hasCredentials) {
-            // we already have credentials, replace text with the values
-            for (int i = 0; i < 3; i++) {
-                String value = prefs.getString(keys[i], "");
-                texts[i].setText(value);
-            }
-        }
-        // then check if the texts are filled or not
-        for (EditText text : texts) {
-            String textValue = text.getText().toString();
-            if (textValue.isBlank() || textValue.isEmpty()) {
-                allTextsNotEmpty = false;
-            }
-        }
+//        boolean hasCredentials = true, allTextsNotEmpty = true;
+//        for (String key : keys) {
+//            boolean contains = prefs.contains(key);
+//            if (!contains) {
+//                hasCredentials = false;
+//            }
+//        }
+//        if (hasCredentials) {
+//            // we already have credentials, replace text with the values
+//            for (int i = 0; i < 3; i++) {
+//                String value = prefs.getString(keys[i], "");
+//                texts[i].setText(value);
+//            }
+//        }
+//        // then check if the texts are filled or not
+//        for (EditText text : texts) {
+//            String textValue = text.getText().toString();
+//            if (textValue.isBlank() || textValue.isEmpty()) {
+//                allTextsNotEmpty = false;
+//            }
+//        }
 
 
-        boolean finalHasCredentials = hasCredentials;
-        boolean finalAllTextsNotEmpty = allTextsNotEmpty;
+//        boolean finalHasCredentials = hasCredentials;
+//        boolean finalAllTextsNotEmpty = allTextsNotEmpty;
         loginbutton.setOnClickListener(view -> {
-            // store information for future logins
-            if (!finalHasCredentials || finalAllTextsNotEmpty) {
-                for (int i = 0; i < 3; i++) {
-                    prefs.edit().putString(keys[i], texts[i].getText().toString()).apply();
-                }
-            }
             Intent intent = new Intent(MainActivity.this, OptionPage2.class);
-            JsonInterface jsonInterface = new JsonInterface(this, "");
-            // set the bar to visible before request
-            progressBar.setVisibility(View.VISIBLE);
-            CompletableFuture<Response> responseFuture = jsonInterface.connectToApi();
+            startActivity(intent);
+            // store information for future logins
+//            if (!finalHasCredentials || finalAllTextsNotEmpty) {
+//                for (int i = 0; i < 3; i++) {
+//                    prefs.edit().putString(keys[i], texts[i].getText().toString()).apply();
+//                }
+//            }
+//            Intent intent = new Intent(MainActivity.this, OptionPage2.class);
+//            JsonInterface jsonInterface = new JsonInterface(this, "");
+//            // set the bar to visible before request
+//            progressBar.setVisibility(View.VISIBLE);
+//            CompletableFuture<Response> responseFuture = jsonInterface.connectToApi();
             // Threads die of natural causes when they return
             // lol
-            new Thread(() -> {
-                try {
-                    Response response = responseFuture.get();
-                    runOnUiThread(() -> {
-                        if (response.isSuccessful()) {
-                            startActivity(intent);
-                        } else {
-                            this.showToast("Invalid Credentials!");
-                        }
-                    });
-
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                } catch (ExecutionException e) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "Failed to connect to moodle API!", Toast.LENGTH_SHORT).show();
-                        logStackTrace("HTTP Tag", e);
-                        progressBar.setVisibility(View.GONE);
-                    });
-                }
-            }).start();
+//            new Thread(() -> {
+//                try {
+//                    Response response = responseFuture.get();
+//                    runOnUiThread(() -> {
+//                        if (response.isSuccessful()) {
+//                            startActivity(intent);
+//                        } else {
+//                            this.showToast("Invalid Credentials!");
+//                        }
+//                    });
+//
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                } catch (ExecutionException e) {
+//                    runOnUiThread(() -> {
+//                        Toast.makeText(MainActivity.this, "Failed to connect to moodle API!", Toast.LENGTH_SHORT).show();
+//                        logStackTrace("HTTP Tag", e);
+//                        progressBar.setVisibility(View.GONE);
+//                    });
+//                }
+//            }).start()
         });
 
 

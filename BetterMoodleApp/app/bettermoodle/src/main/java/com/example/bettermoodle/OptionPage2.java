@@ -53,7 +53,6 @@ public class OptionPage2 extends AppCompatActivity implements NavigationView.OnN
         } else if (item.getItemId() == R.id.nav_notify) {
             getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new NotificationsFragment()).commit();
         } else if (item.getItemId() == R.id.reg_button) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.frag_container, new RegisterFragment()).commit();
         } else if (item.getItemId() == R.id.logoutbutton) {
             clearPrefs(this);
             startActivity(intent1);
