@@ -35,10 +35,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="180dp"
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="30dp"
             android:fontFamily="@font/segoeui"
-            android:text="[Student Name]"
-            android:textSize="25sp">
+            android:text="Mohammad Omar Youssef Shahbaz"
+            android:textSize="20sp">
 
         </TextView>
 
@@ -47,10 +47,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="180dp"
-            android:layout_marginTop="90dp"
+            android:layout_marginTop="100dp"
             android:fontFamily="@font/segoeui"
-            android:text="[Student ID]"
-            android:textSize="25sp"
+            android:text="202200578"
+            android:textSize="20sp"
             app:layout_constraintStart_toEndOf="@id/def_user_photo"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -241,11 +241,12 @@
                     android:id="@+id/Credits"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
-                    android:layout_gravity="center"
                     android:layout_marginTop="10dp"
+                    android:gravity="center"
                     android:fontFamily="@font/segoeui"
                     android:text="Credits Completed"
+                    android:layout_marginLeft="5dp"
+                    android:paddingHorizontal="4dp"
                     android:textSize="20sp"
                     android:textStyle="bold">
 

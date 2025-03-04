@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:id="@+id/list_customtext"
-    android:text="Announcement"
-    android:textSize="20sp"
-    android:gravity="center_vertical"
-    android:fontFamily="@font/segoeui"
-    android:padding="20dp">
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/list_customtext"
+        android:text="[Announcement Placeholder!]"
+        android:textSize="20sp"
+        android:ellipsize="end"
+        android:maxLines="4"
+        android:gravity="center_vertical"
+        android:fontFamily="@font/segoeui"
+        android:padding="20dp">
 
-</TextView>
+    </TextView>
+
+
+
